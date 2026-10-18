@@ -16,7 +16,7 @@ export default async function SchemesPage() {
 
   try {
     const { data: searchData, error } = await supabaseAdmin.rpc('mss_search_data');
-    if (!error && Array.isArray(searchData)) {
+    if (!error && Array.isArray(searchData) && searchData.length > 0) {
       schemeList = searchData.map((item: any) => {
         const profile = item.search_record?.schemeSearchProfile || {};
         const statusRaw = (item.scheme_record?.identity?.status || 'active').toUpperCase();
@@ -31,8 +31,24 @@ export default async function SchemesPage() {
           status,
         };
       });
-    } else if (error) {
-      console.error("Failed to fetch schemes via RPC:", error);
+    } else {
+      // Direct query fallback from catalog.scheme
+      const { data: dbSchemes, error: dbError } = await supabaseAdmin
+        .schema('catalog')
+        .from('scheme')
+        .select('id, scheme_code, name_en, state, scheme_type, status')
+        .order('id', { ascending: false });
+
+      if (!dbError && Array.isArray(dbSchemes)) {
+        schemeList = dbSchemes.map((s: any) => ({
+          id: s.id,
+          scheme_code: s.scheme_code || s.id,
+          name_en: s.name_en,
+          state: s.state || 'All India',
+          scheme_type: s.scheme_type || 'General',
+          status: s.status || 'DRAFT',
+        }));
+      }
     }
   } catch (err) {
     console.error("SchemesPage fetch error:", err);

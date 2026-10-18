@@ -1,157 +1,284 @@
-'use server'
+'use server';
 
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { SchemeFormValues, schemeFormSchema } from "@/lib/schema/scheme";
 import { revalidatePath } from "next/cache";
+import crypto from "crypto";
+
+function computeSha256(content: string): string {
+  return crypto.createHash("sha256").update(content, "utf8").digest("hex");
+}
 
 export async function submitSchemeDraft(data: SchemeFormValues) {
   const supabase = await createClient();
-  
-  // Admin client to bypass RLS for inserts
+
+  // Validate form data against schema
+  const result = schemeFormSchema.safeParse(data);
+  if (!result.success) {
+    const errorMessages = result.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
+    return { error: `Validation failed: ${errorMessages}` };
+  }
+
+  const validated = result.data;
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id || null;
+
+  // Admin client bypasses RLS using service_role key
   const supabaseAdmin = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
-  
-  // Validate data
-  const result = schemeFormSchema.safeParse(data);
-  if (!result.success) {
-    return { error: "Validation failed" };
-  }
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  const userId = user?.id || null;
 
-  // 1. Insert into catalog.scheme as DRAFT
-  // 2. Add an entry to admin.catalog_change_log
-  
-  // Generate a random UUID for the entity
-  const entityId = crypto.randomUUID();
+  // Generate canonical entity ID
+  const entityId = `SCH${Date.now().toString().slice(-6)}`;
 
-  // Create record JSON according to canonical MSS Entity specification for database & Flutter compatibility
+  // Create record JSON adhering strictly to Catalog v3.1 reference skeleton (SCH000124)
   const recordJson = {
     identity: {
       id: entityId,
       entityType: "scheme",
-      code: data.code,
-      name: data.title,
-      status: "active",
+      code: validated.code,
+      legacyCodes: [],
+      name: validated.title,
+      shortName: validated.code,
+      acronym: null,
+      slug: validated.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
       language: "en",
+      status: "active",
+      updated_at: new Date().toISOString(),
     },
     content: {
       classification: {
         government: {
-          level: data.isCentral ? "central" : "state",
-          levelText: data.isCentral ? "Central" : "State",
+          level: validated.isCentral ? "central" : "state",
+          levelText: validated.isCentral ? "Central" : "State",
           country: "IN",
-          states: data.isCentral ? [] : [data.targetState],
-          statesText: data.targetState,
-          departmentText: data.sponsoringAuthority,
-          implementingAgencyText: data.sponsoringAuthority,
+          states: validated.isCentral ? [] : [validated.targetState],
+          statesText: validated.isCentral ? "Pan-India" : validated.targetState,
+          ministryText: validated.ministry,
+          departmentText: validated.sponsoringAuthority,
+          implementingAgencyText: validated.implementingAgency || validated.sponsoringAuthority,
         },
-        schemeTypeText: data.category,
-        sectorsText: data.category,
+        schemeType: validated.category.toLowerCase().replace(/[^a-z0-9]/g, "_"),
+        schemeTypeText: validated.category,
+        sectors: [],
+        sectorsText: validated.category,
+        categories: [],
+        tags: validated.demographicTags,
       },
       overview: {
-        summary: data.title,
-        description: data.title,
+        summary: validated.summaryEn || validated.title,
+        description: validated.descriptionEn || validated.summaryEn || validated.title,
+        objective: validated.objectivesEn || validated.title,
+        version: "Catalog v3.1",
+        lastUpdatedText: "Current",
       },
-      objectives: data.title,
+      // Catalog v3.1 Contract: objectives MUST be an array of strings
+      objectives: [validated.objectivesEn || validated.title],
       targetBeneficiaries: {
-        description: `Targeting: ${data.demographicTags.join(", ") || "MSMEs & Enterprises"}`,
+        description: `Targeting ${validated.enterpriseScales.join(", ")} enterprises: ${
+          validated.demographicTags.join(", ") || "General applicants"
+        }`,
+        beneficiaryTypes: [],
+        enterpriseTypes: validated.enterpriseScales.map((s) => s.toLowerCase()),
+        businessStages: [],
+        specialCategories: validated.demographicTags,
       },
       eligibility: {
         structured: {
           age: {
-            minYears: data.minAge || null,
-            maxYears: data.maxAge || null,
+            minYears: validated.minAge || null,
+            maxYears: validated.maxAge || null,
+            text: validated.minAge || validated.maxAge
+              ? `${validated.minAge || 18} to ${validated.maxAge || 65} years`
+              : null,
           },
           gender: {
-            values: data.genderTarget === "All" ? [] : [data.genderTarget],
+            values: validated.genderTarget === "All" ? [] : [validated.genderTarget],
           },
           enterprise: {
             applies: true,
-            types: ["micro", "small", "medium"],
+            types: validated.enterpriseScales.map((s) => s.toLowerCase()),
           },
           specialCategory: {
-            values: data.demographicTags,
+            values: validated.demographicTags,
           },
           turnover: {
-            maxInr: data.incomeCap || null,
+            maxInr: validated.turnoverCapInr || null,
+          },
+          investment: {
+            maxInr: validated.investmentCapInr || null,
           },
         },
         narrative: {
-          criteria: `Eligible for ${data.demographicTags.join(", ") || "eligible enterprises"} in ${data.targetState}.`,
+          criteria: `Eligible for ${validated.enterpriseScales.join(", ")} MSMEs in ${validated.targetState}.`,
         },
       },
       benefits: {
-        summary: `${data.benefitType} assistance`,
-        benefitTypes: [data.benefitType],
+        summary: validated.benefitsSummary || `${validated.benefitType} financial assistance`,
+        benefitTypes: [validated.benefitType],
         capitalSubsidy: {
-          minAmountInr: data.benefitAmountMin || null,
-          maxAmountInr: data.benefitAmountMax || null,
-          maxAmountText: data.benefitAmountMax ? `₹${data.benefitAmountMax}` : null,
-          description: `${data.benefitType} up to ₹${data.benefitAmountMax || "N/A"}`,
+          minAmountInr: validated.benefitAmountMin || null,
+          maxAmountInr: validated.benefitAmountMax || null,
+          maxAmountText: validated.benefitAmountMax ? `₹${validated.benefitAmountMax.toLocaleString("en-IN")}` : null,
+          subsidyPercentage: validated.subsidyPercentage || null,
+          description: validated.benefitsSummary || `${validated.benefitType} up to ₹${validated.benefitAmountMax || "N/A"}`,
         },
       },
-      requiredDocuments: data.requiredDocuments.map((doc, idx) => ({
-        documentId: `${entityId}-DOC${idx + 1}`,
+      requiredDocuments: validated.requiredDocuments.map((doc, idx) => ({
+        documentId: `${entityId}-DOC${String(idx + 1).padStart(3, "0")}`,
         name: doc,
         mandatory: "required",
         mandatoryText: "Yes",
         description: `Required submission document: ${doc}`,
       })),
       applicationProcess: {
-        onlineUrl: data.applicationUrl || null,
-        modeText: data.applicationUrl ? "Online" : "Offline",
+        onlineUrl: validated.schemeUrl || null,
+        modeText: validated.applicationMode,
       },
+      schemeUrl: validated.schemeUrl || null,
       resources: {
-        officialWebsiteUrl: data.applicationUrl || null,
+        officialWebsiteUrl: validated.schemeUrl || null,
       },
-    },
-    localization: {
-      en: {
-        name: data.title,
-        summary: data.title,
-        description: data.title,
-        benefitsText: `${data.benefitType} assistance up to ₹${data.benefitAmountMax || "N/A"}`,
-      },
-      ta: {
-        name: data.spokenTitleTa || data.title,
-        summary: data.spokenSummaryTa || data.title,
-        description: data.spokenSummaryTa || data.title,
-      },
-      hi: {
-        name: data.spokenTitleHi || data.title,
-        summary: data.spokenSummaryHi || data.title,
-        description: data.spokenSummaryHi || data.title,
+      // Trilingual Localization: en, ta, hi
+      localization: {
+        en: {
+          name: validated.title,
+          summary: validated.summaryEn || validated.title,
+          description: validated.descriptionEn || validated.summaryEn || validated.title,
+          benefitsText: validated.benefitsSummary || `${validated.benefitType} financial assistance`,
+        },
+        ta: {
+          name: validated.titleTa || validated.title,
+          summary: validated.summaryTa || validated.summaryEn || validated.title,
+          description: validated.descriptionTa || validated.descriptionEn || validated.title,
+          benefitsText: validated.benefitsTa || validated.benefitsSummary || `${validated.benefitType} நிதி உதவி`,
+        },
+        hi: {
+          name: validated.titleHi || validated.title,
+          summary: validated.summaryHi || validated.summaryEn || validated.title,
+          description: validated.descriptionHi || validated.descriptionEn || validated.title,
+          benefitsText: validated.benefitsHi || validated.benefitsSummary || `${validated.benefitType} वित्तीय सहायता`,
+        },
       },
     },
   };
 
-  const { error: rpcError } = await supabaseAdmin.rpc('create_scheme_draft', {
+  const recordJsonString = JSON.stringify(recordJson);
+  const recordChecksum = `sha256:${computeSha256(recordJsonString)}`;
+
+  // 1. Attempt insertion via create_scheme_draft RPC
+  const { error: rpcError } = await supabaseAdmin.rpc("create_scheme_draft", {
     p_id: entityId,
     p_record_json: recordJson,
-    p_scheme_code: data.code,
-    p_name_en: data.title,
-    p_state: data.targetState,
-    p_scheme_type: data.category,
-    p_primary_authority_id: data.sponsoringAuthority,
-    p_changed_by: userId
+    p_scheme_code: validated.code,
+    p_name_en: validated.title,
+    p_state: validated.targetState,
+    p_scheme_type: validated.category,
+    p_primary_authority_id: validated.sponsoringAuthority,
+    p_changed_by: userId,
   });
 
+  // 2. If RPC fails or has different parameters, fallback to direct schema insert
   if (rpcError) {
-    console.error("RPC Error:", rpcError);
-    return { error: `Failed to insert scheme: ${rpcError.message}` };
+    console.warn("RPC create_scheme_draft error, attempting direct catalog.scheme insert:", rpcError.message);
+
+    const { error: directError } = await supabaseAdmin
+      .schema("catalog")
+      .from("scheme")
+      .insert({
+        id: entityId,
+        version: "1.36.0-alpha",
+        status: "DRAFT",
+        checksum: recordChecksum,
+        record_json: recordJson,
+        scheme_code: validated.code,
+        name_en: validated.title,
+        name_ta: validated.titleTa || null,
+        government_level: validated.isCentral ? "central" : "state",
+        scheme_type: validated.category,
+        state: validated.targetState,
+        ministry: validated.ministry,
+        department: validated.sponsoringAuthority,
+        search_keywords: `${validated.title} ${validated.category} ${validated.enterpriseScales.join(" ")}`,
+        primary_authority_id: validated.sponsoringAuthority,
+        minimum_funding_amount: validated.benefitAmountMin || null,
+        maximum_funding_amount: validated.benefitAmountMax || null,
+        is_active: true,
+      });
+
+    if (directError) {
+      console.error("Direct catalog.scheme insert error:", directError);
+      return { error: `Failed to insert scheme: ${directError.message}` };
+    }
   }
 
-  revalidatePath('/schemes');
-  
-  // Log the action
-  import("@/lib/logger").then(({ logAdminAction }) => {
-    logAdminAction('CREATE_SCHEME_DRAFT', { entityId, scheme_code: data.code });
-  });
+  // 3. Populate trilingual content in catalog.content if table is accessible
+  try {
+    const contentRows = [
+      {
+        entity_type: "scheme",
+        entity_id: entityId,
+        lang: "en",
+        name: validated.title,
+        summary: validated.summaryEn || validated.title,
+        description: validated.descriptionEn || validated.summaryEn || validated.title,
+        benefits_text: validated.benefitsSummary || `${validated.benefitType} financial assistance`,
+        origin: "human",
+        verified: true,
+      },
+      {
+        entity_type: "scheme",
+        entity_id: entityId,
+        lang: "ta",
+        name: validated.titleTa || validated.title,
+        summary: validated.summaryTa || validated.summaryEn || validated.title,
+        description: validated.descriptionTa || validated.descriptionEn || validated.title,
+        benefits_text: validated.benefitsTa || validated.benefitsSummary || `${validated.benefitType} நிதி உதவி`,
+        origin: "human",
+        verified: !!validated.titleTa,
+      },
+      {
+        entity_type: "scheme",
+        entity_id: entityId,
+        lang: "hi",
+        name: validated.titleHi || validated.title,
+        summary: validated.summaryHi || validated.summaryEn || validated.title,
+        description: validated.descriptionHi || validated.descriptionEn || validated.title,
+        benefits_text: validated.benefitsHi || validated.benefitsSummary || `${validated.benefitType} वित्तीय सहायता`,
+        origin: "human",
+        verified: !!validated.titleHi,
+      },
+    ];
 
-  return { success: true };
+    await supabaseAdmin
+      .schema("catalog")
+      .from("content")
+      .upsert(contentRows, { onConflict: "entity_type,entity_id,lang" });
+  } catch (contentErr) {
+    console.warn("Could not insert to catalog.content (non-fatal):", contentErr);
+  }
+
+  // 4. Log admin audit action
+  try {
+    await supabaseAdmin
+      .schema("admin")
+      .from("catalog_change_log")
+      .insert({
+        entity: "scheme",
+        entity_id: entityId,
+        field_path: "record_json",
+        new_value: recordJson,
+        reason: `Admin drafted scheme "${validated.title}" (${validated.code}) via Admin Panel`,
+        changed_by: userId,
+      });
+  } catch (logErr) {
+    console.warn("Could not log to admin.catalog_change_log:", logErr);
+  }
+
+  revalidatePath("/schemes");
+  revalidatePath("/");
+
+  return { success: true, entityId, code: validated.code };
 }

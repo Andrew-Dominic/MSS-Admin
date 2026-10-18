@@ -19,7 +19,7 @@ export default async function DashboardPage() {
 
   try {
     const { data: searchData, error } = await supabaseAdmin.rpc('mss_search_data');
-    if (!error && Array.isArray(searchData)) {
+    if (!error && Array.isArray(searchData) && searchData.length > 0) {
       const allSchemes = searchData.map((item: any) => {
         const profile = item.search_record?.schemeSearchProfile || {};
         const statusRaw = (item.scheme_record?.identity?.status || 'active').toUpperCase();
@@ -39,8 +39,28 @@ export default async function DashboardPage() {
       activePublished = allSchemes.filter((s: any) => s.status === 'PUBLISHED').length;
       draftsPending = allSchemes.filter((s: any) => s.status === 'DRAFT').length;
       recentSchemes = allSchemes.slice(0, 4);
-    } else if (error) {
-      console.warn("Could not query mss_search_data:", error.message);
+    } else {
+      // Direct query fallback from catalog.scheme
+      const { data: dbSchemes, error: dbError } = await supabaseAdmin
+        .schema('catalog')
+        .from('scheme')
+        .select('id, scheme_code, name_en, state, scheme_type, status, updated_at')
+        .order('updated_at', { ascending: false });
+
+      if (!dbError && Array.isArray(dbSchemes)) {
+        totalSchemes = dbSchemes.length;
+        activePublished = dbSchemes.filter((s: any) => (s.status || '').toUpperCase() === 'PUBLISHED').length;
+        draftsPending = dbSchemes.filter((s: any) => (s.status || '').toUpperCase() === 'DRAFT').length;
+        recentSchemes = dbSchemes.slice(0, 4).map((s: any) => ({
+          id: s.id,
+          scheme_code: s.scheme_code || s.id,
+          name_en: s.name_en,
+          state: s.state || 'All India',
+          scheme_type: s.scheme_type || 'General',
+          status: s.status || 'DRAFT',
+          updated_at: s.updated_at || new Date().toISOString(),
+        }));
+      }
     }
   } catch (err) {
     console.error("Dashboard metrics fetch error:", err);
