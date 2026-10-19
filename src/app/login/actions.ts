@@ -30,3 +30,16 @@ export async function login(formData: FormData) {
   revalidatePath('/', 'layout')
   redirect('/schemes/new')
 }
+
+export async function logout() {
+  try {
+    const supabase = await createClient()
+    await supabase.auth.signOut()
+  } catch (e) {
+    // ignore
+  }
+  const { cookies } = await import('next/headers')
+  const cookieStore = await cookies()
+  cookieStore.delete('dev_admin_auth')
+  redirect('/login')
+}

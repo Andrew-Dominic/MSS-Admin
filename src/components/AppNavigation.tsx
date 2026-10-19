@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -9,8 +10,11 @@ import {
   Bug, 
   Bell, 
   Settings,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { logout } from "@/app/login/actions";
 
 export function SidebarNav() {
   const pathname = usePathname();
@@ -94,6 +98,38 @@ export function SidebarNav() {
 
 export function TopHeaderNav() {
   const pathname = usePathname();
+  const [userEmail, setUserEmail] = useState<string>("admin@msme.gov.in");
+  const [userName, setUserName] = useState<string>("Admin User");
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
+
+  useEffect(() => {
+    try {
+      const supabase = createClient();
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user?.email) {
+          setUserEmail(user.email);
+          const metaName = user.user_metadata?.full_name || user.email.split("@")[0];
+          setUserName(metaName.charAt(0).toUpperCase() + metaName.slice(1));
+        }
+      }).catch(() => {
+        // Fallback default
+      });
+    } catch {
+      // Fallback default
+    }
+  }, []);
+
+  const initials = userName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase() || "AU";
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    await logout();
+  };
 
   const isOverview = pathname === "/";
   const isSchemes = pathname.startsWith("/schemes");
@@ -154,18 +190,26 @@ export function TopHeaderNav() {
       </div>
 
       {/* Right Controls / Admin Profile */}
-      <div className="flex items-center gap-4">
-        <Link href="/notifications" className="bg-white rounded-full p-2.5 shadow-sm border border-gray-100 text-gray-500 hover:text-orange-600 transition-colors">
+      <div className="flex items-center gap-3">
+        <Link href="/notifications" className="bg-white rounded-full p-2.5 shadow-sm border border-gray-100 text-gray-500 hover:text-orange-600 transition-colors" title="Announcements & Alerts">
           <Bell className="w-5 h-5" />
         </Link>
-        <div className="bg-white rounded-full pl-2 pr-4 py-1.5 shadow-sm border border-gray-100 flex items-center gap-3">
+        <div className="bg-white rounded-full pl-2 pr-3 py-1.5 shadow-sm border border-gray-100 flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs border border-orange-200 shrink-0">
-            AU
+            {initials}
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-gray-900 leading-tight">Admin User</span>
-            <span className="text-xs text-gray-500 leading-tight">admin@prajaya.org</span>
+            <span className="text-sm font-semibold text-gray-900 leading-tight">{userName}</span>
+            <span className="text-xs text-gray-500 leading-tight font-mono">{userEmail}</span>
           </div>
+          <button
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            title="Sign out of Admin Portal"
+            className="ml-1 p-1.5 rounded-full text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </header>
