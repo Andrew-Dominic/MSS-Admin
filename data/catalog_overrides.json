@@ -83,21 +83,39 @@
     "name_en": "Test Fresh Scheme",
     "state": "All India",
     "scheme_type": "Subsidies & Incentives",
-    "status": "PUBLISHED",
-    "is_active": true,
+    "status": "DISABLED",
+    "is_active": false,
+    "record_json": {},
+    "updated_at": "2026-10-19T08:42:09.397Z"
+  },
+  "32a84b33-dc30-4fad-81a2-f9254513224c": {
+    "id": "32a84b33-dc30-4fad-81a2-f9254513224c",
+    "status": "DISABLED",
+    "is_active": false,
+    "record_json": {},
+    "updated_at": "2026-10-19T07:42:34.836Z"
+  },
+  "6ead506f-cca5-4aca-bfe5-89bd3cd57385": {
+    "id": "6ead506f-cca5-4aca-bfe5-89bd3cd57385",
+    "scheme_code": "MSME2627-955",
+    "name_en": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+    "state": "All India",
+    "scheme_type": "Infrastructure & Technology",
+    "status": "DELETED",
+    "is_active": false,
     "record_json": {
       "identity": {
-        "id": "036e2e62-af50-482f-9404-f728f29a617c",
+        "id": "6ead506f-cca5-4aca-bfe5-89bd3cd57385",
         "entityType": "scheme",
-        "code": "036e2e62-af50-482f-9404-f728f29a617c",
+        "code": "MSME2627-955",
         "legacyCodes": [],
-        "name": "Test Fresh Scheme",
-        "shortName": "036e2e62-af50-482f-9404-f728f29a617c",
+        "name": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+        "shortName": "MSME2627-955",
         "acronym": null,
-        "slug": "test-fresh-scheme",
+        "slug": "chief-minister-maha-fund-for-entrepreneurship-and-innovation",
         "language": "en",
         "status": "active",
-        "updated_at": "2026-10-19T07:21:57.586Z"
+        "updated_at": "2026-10-19T08:46:49.933Z"
       },
       "content": {
         "classification": {
@@ -108,30 +126,33 @@
             "states": [],
             "statesText": "Pan-India",
             "ministryText": "Ministry of Micro, Small & Medium Enterprises",
-            "departmentText": "Ministry of MSME",
-            "implementingAgencyText": "Ministry of MSME"
+            "departmentText": "Ministry of MSME / KVIC / DC-MSME",
+            "implementingAgencyText": "District Industries Centres (DIC) / State KVIC / Coir Board"
           },
-          "schemeType": "subsidies___incentives",
-          "schemeTypeText": "Subsidies & Incentives",
+          "schemeType": "infrastructure___technology",
+          "schemeTypeText": "Infrastructure & Technology",
           "sectors": [],
-          "sectorsText": "Subsidies & Incentives",
+          "sectorsText": "Infrastructure & Technology",
           "categories": [],
           "tags": [
+            "Women",
+            "SC",
+            "ST",
             "General / All"
           ]
         },
         "overview": {
-          "summary": "Test Fresh Scheme",
-          "description": "Test Fresh Scheme",
-          "objective": "Test Fresh Scheme",
+          "summary": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+          "description": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+          "objective": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
           "version": "Catalog v3.1",
           "lastUpdatedText": "Current"
         },
         "objectives": [
-          "Test Fresh Scheme"
+          "Chief Minister Maha-Fund for Entrepreneurship and Innovation"
         ],
         "targetBeneficiaries": {
-          "description": "Targeting Micro, Small, Medium enterprises: General / All",
+          "description": "Targeting Micro, Small, Medium enterprises: Women, SC, ST, General / All",
           "beneficiaryTypes": [],
           "enterpriseTypes": [
             "micro",
@@ -140,6 +161,9 @@
           ],
           "businessStages": [],
           "specialCategories": [
+            "Women",
+            "SC",
+            "ST",
             "General / All"
           ]
         },
@@ -163,6 +187,9 @@
             },
             "specialCategory": {
               "values": [
+                "Women",
+                "SC",
+                "ST",
                 "General / All"
               ]
             },
@@ -192,28 +219,28 @@
         },
         "requiredDocuments": [
           {
-            "documentId": "036e2e62-af50-482f-9404-f728f29a617c-DOC001",
+            "documentId": "6ead506f-cca5-4aca-bfe5-89bd3cd57385-DOC001",
             "name": "Aadhaar Card of Promoters",
             "mandatory": "required",
             "mandatoryText": "Yes",
             "description": "Required submission document: Aadhaar Card of Promoters"
           },
           {
-            "documentId": "036e2e62-af50-482f-9404-f728f29a617c-DOC002",
+            "documentId": "6ead506f-cca5-4aca-bfe5-89bd3cd57385-DOC002",
             "name": "Udyam Registration Certificate",
             "mandatory": "required",
             "mandatoryText": "Yes",
             "description": "Required submission document: Udyam Registration Certificate"
           },
           {
-            "documentId": "036e2e62-af50-482f-9404-f728f29a617c-DOC003",
+            "documentId": "6ead506f-cca5-4aca-bfe5-89bd3cd57385-DOC003",
             "name": "Detailed Project Report (DPR)",
             "mandatory": "required",
             "mandatoryText": "Yes",
             "description": "Required submission document: Detailed Project Report (DPR)"
           },
           {
-            "documentId": "036e2e62-af50-482f-9404-f728f29a617c-DOC004",
+            "documentId": "6ead506f-cca5-4aca-bfe5-89bd3cd57385-DOC004",
             "name": "Bank Account Statement (6 Months)",
             "mandatory": "required",
             "mandatoryText": "Yes",
@@ -221,42 +248,405 @@
           }
         ],
         "applicationProcess": {
-          "onlineUrl": null,
+          "onlineUrl": "https://www.dcmsme.gov.in",
           "modeText": "Online Portal"
         },
-        "schemeUrl": null,
+        "schemeUrl": "https://www.dcmsme.gov.in",
         "resources": {
-          "officialWebsiteUrl": null
+          "officialWebsiteUrl": "https://www.dcmsme.gov.in"
         },
         "localization": {
           "en": {
-            "name": "Test Fresh Scheme",
-            "summary": "Test Fresh Scheme",
-            "description": "Test Fresh Scheme",
+            "name": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "summary": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "description": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
             "benefitsText": "Capital Subsidy financial assistance"
           },
           "ta": {
-            "name": "Test Fresh Scheme",
-            "summary": "Test Fresh Scheme",
-            "description": "Test Fresh Scheme",
+            "name": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "summary": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "description": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
             "benefitsText": "Capital Subsidy நிதி உதவி"
           },
           "hi": {
-            "name": "Test Fresh Scheme",
-            "summary": "Test Fresh Scheme",
-            "description": "Test Fresh Scheme",
+            "name": "मुख्यमंत्री महा-फंड फॉर एंटरप्रेन्योरिशप एंड इनोवेशन (उद्यमशीलता और नवाचार हेतु मुख्यमंत्री महा-िनिध)",
+            "summary": "मुख्यमंत्री महा-फंड फॉर एंटरप्रेन्योरिशप एंड इनोवेशन (उद्यमशीलता और नवाचार हेतु मुख्यमंत्री महा-िनिध)",
+            "description": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
             "benefitsText": "Capital Subsidy वित्तीय सहायता"
           }
         }
       }
     },
-    "updated_at": "2026-10-19T07:21:57.891Z"
+    "updated_at": "2026-10-19T09:02:51.630Z",
+    "isDeleted": true
   },
-  "32a84b33-dc30-4fad-81a2-f9254513224c": {
-    "id": "32a84b33-dc30-4fad-81a2-f9254513224c",
-    "status": "DISABLED",
+  "5e5bfdad-19bb-4117-8f65-a6939c36fcda": {
+    "id": "5e5bfdad-19bb-4117-8f65-a6939c36fcda",
+    "scheme_code": "MSME2627-956",
+    "name_en": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+    "state": "All India",
+    "scheme_type": "Infrastructure & Technology",
+    "status": "DELETED",
     "is_active": false,
-    "record_json": {},
-    "updated_at": "2026-10-19T07:42:34.836Z"
+    "record_json": {
+      "identity": {
+        "id": "5e5bfdad-19bb-4117-8f65-a6939c36fcda",
+        "entityType": "scheme",
+        "code": "MSME2627-956",
+        "legacyCodes": [],
+        "name": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+        "shortName": "MSME2627-956",
+        "acronym": null,
+        "slug": "chief-minister-maha-fund-for-entrepreneurship-and-innovation",
+        "language": "en",
+        "status": "active",
+        "updated_at": "2026-10-19T08:47:25.744Z"
+      },
+      "content": {
+        "classification": {
+          "government": {
+            "level": "central",
+            "levelText": "Central",
+            "country": "IN",
+            "states": [],
+            "statesText": "Pan-India",
+            "ministryText": "Ministry of Micro, Small & Medium Enterprises",
+            "departmentText": "Ministry of MSME / KVIC / DC-MSME",
+            "implementingAgencyText": "District Industries Centres (DIC) / State KVIC / Coir Board"
+          },
+          "schemeType": "infrastructure___technology",
+          "schemeTypeText": "Infrastructure & Technology",
+          "sectors": [],
+          "sectorsText": "Infrastructure & Technology",
+          "categories": [],
+          "tags": [
+            "Women",
+            "SC",
+            "ST",
+            "General / All"
+          ]
+        },
+        "overview": {
+          "summary": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+          "description": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+          "objective": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+          "version": "Catalog v3.1",
+          "lastUpdatedText": "Current"
+        },
+        "objectives": [
+          "Chief Minister Maha-Fund for Entrepreneurship and Innovation"
+        ],
+        "targetBeneficiaries": {
+          "description": "Targeting Micro, Small, Medium enterprises: Women, SC, ST, General / All",
+          "beneficiaryTypes": [],
+          "enterpriseTypes": [
+            "micro",
+            "small",
+            "medium"
+          ],
+          "businessStages": [],
+          "specialCategories": [
+            "Women",
+            "SC",
+            "ST",
+            "General / All"
+          ]
+        },
+        "eligibility": {
+          "structured": {
+            "age": {
+              "minYears": null,
+              "maxYears": null,
+              "text": null
+            },
+            "gender": {
+              "values": []
+            },
+            "enterprise": {
+              "applies": true,
+              "types": [
+                "micro",
+                "small",
+                "medium"
+              ]
+            },
+            "specialCategory": {
+              "values": [
+                "Women",
+                "SC",
+                "ST",
+                "General / All"
+              ]
+            },
+            "turnover": {
+              "maxInr": null
+            },
+            "investment": {
+              "maxInr": null
+            }
+          },
+          "narrative": {
+            "criteria": "Eligible for Micro, Small, Medium MSMEs in All India."
+          }
+        },
+        "benefits": {
+          "summary": "Capital Subsidy financial assistance",
+          "benefitTypes": [
+            "Capital Subsidy"
+          ],
+          "capitalSubsidy": {
+            "minAmountInr": null,
+            "maxAmountInr": null,
+            "maxAmountText": null,
+            "subsidyPercentage": null,
+            "description": "Capital Subsidy up to ₹N/A"
+          }
+        },
+        "requiredDocuments": [
+          {
+            "documentId": "5e5bfdad-19bb-4117-8f65-a6939c36fcda-DOC001",
+            "name": "Aadhaar Card of Promoters",
+            "mandatory": "required",
+            "mandatoryText": "Yes",
+            "description": "Required submission document: Aadhaar Card of Promoters"
+          },
+          {
+            "documentId": "5e5bfdad-19bb-4117-8f65-a6939c36fcda-DOC002",
+            "name": "Udyam Registration Certificate",
+            "mandatory": "required",
+            "mandatoryText": "Yes",
+            "description": "Required submission document: Udyam Registration Certificate"
+          },
+          {
+            "documentId": "5e5bfdad-19bb-4117-8f65-a6939c36fcda-DOC003",
+            "name": "Detailed Project Report (DPR)",
+            "mandatory": "required",
+            "mandatoryText": "Yes",
+            "description": "Required submission document: Detailed Project Report (DPR)"
+          },
+          {
+            "documentId": "5e5bfdad-19bb-4117-8f65-a6939c36fcda-DOC004",
+            "name": "Bank Account Statement (6 Months)",
+            "mandatory": "required",
+            "mandatoryText": "Yes",
+            "description": "Required submission document: Bank Account Statement (6 Months)"
+          }
+        ],
+        "applicationProcess": {
+          "onlineUrl": "https://www.dcmsme.gov.in",
+          "modeText": "Online Portal"
+        },
+        "schemeUrl": "https://www.dcmsme.gov.in",
+        "resources": {
+          "officialWebsiteUrl": "https://www.dcmsme.gov.in"
+        },
+        "localization": {
+          "en": {
+            "name": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "summary": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "description": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "benefitsText": "Capital Subsidy financial assistance"
+          },
+          "ta": {
+            "name": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "summary": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "description": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "benefitsText": "Capital Subsidy நிதி உதவி"
+          },
+          "hi": {
+            "name": "मुख्यमंत्री महा-फंड फॉर एंटरप्रेन्योरिशप एंड इनोवेशन (उद्यमशीलता और नवाचार हेतु मुख्यमंत्री महा-िनिध)",
+            "summary": "मुख्यमंत्री महा-फंड फॉर एंटरप्रेन्योरिशप एंड इनोवेशन (उद्यमशीलता और नवाचार हेतु मुख्यमंत्री महा-िनिध)",
+            "description": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "benefitsText": "Capital Subsidy वित्तीय सहायता"
+          }
+        }
+      }
+    },
+    "updated_at": "2026-10-19T09:02:54.870Z",
+    "isDeleted": true
+  },
+  "5b2bedee-8819-4460-a802-17c8915156ba": {
+    "id": "5b2bedee-8819-4460-a802-17c8915156ba",
+    "scheme_code": "MSME2627-999",
+    "name_en": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+    "state": "All India",
+    "scheme_type": "Infrastructure & Technology",
+    "status": "DRAFT",
+    "is_active": true,
+    "record_json": {
+      "identity": {
+        "id": "5b2bedee-8819-4460-a802-17c8915156ba",
+        "entityType": "scheme",
+        "code": "MSME2627-999",
+        "legacyCodes": [],
+        "name": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+        "shortName": "MSME2627-999",
+        "acronym": null,
+        "slug": "chief-minister-maha-fund-for-entrepreneurship-and-innovation",
+        "language": "en",
+        "status": "active",
+        "updated_at": "2026-10-19T09:01:55.131Z"
+      },
+      "content": {
+        "classification": {
+          "government": {
+            "level": "central",
+            "levelText": "Central",
+            "country": "IN",
+            "states": [],
+            "statesText": "Pan-India",
+            "ministryText": "Ministry of Micro, Small & Medium Enterprises",
+            "departmentText": "Ministry of MSME / KVIC / DC-MSME",
+            "implementingAgencyText": "District Industries Centres (DIC) / State KVIC / Coir Board"
+          },
+          "schemeType": "infrastructure___technology",
+          "schemeTypeText": "Infrastructure & Technology",
+          "sectors": [],
+          "sectorsText": "Infrastructure & Technology",
+          "categories": [],
+          "tags": [
+            "Women",
+            "SC",
+            "ST",
+            "General / All"
+          ]
+        },
+        "overview": {
+          "summary": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+          "description": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+          "objective": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+          "version": "Catalog v3.1",
+          "lastUpdatedText": "Current"
+        },
+        "objectives": [
+          "Chief Minister Maha-Fund for Entrepreneurship and Innovation"
+        ],
+        "targetBeneficiaries": {
+          "description": "Targeting Micro, Small, Medium enterprises: Women, SC, ST, General / All",
+          "beneficiaryTypes": [],
+          "enterpriseTypes": [
+            "micro",
+            "small",
+            "medium"
+          ],
+          "businessStages": [],
+          "specialCategories": [
+            "Women",
+            "SC",
+            "ST",
+            "General / All"
+          ]
+        },
+        "eligibility": {
+          "structured": {
+            "age": {
+              "minYears": null,
+              "maxYears": null,
+              "text": null
+            },
+            "gender": {
+              "values": []
+            },
+            "enterprise": {
+              "applies": true,
+              "types": [
+                "micro",
+                "small",
+                "medium"
+              ]
+            },
+            "specialCategory": {
+              "values": [
+                "Women",
+                "SC",
+                "ST",
+                "General / All"
+              ]
+            },
+            "turnover": {
+              "maxInr": null
+            },
+            "investment": {
+              "maxInr": null
+            }
+          },
+          "narrative": {
+            "criteria": "Eligible for Micro, Small, Medium MSMEs in All India."
+          }
+        },
+        "benefits": {
+          "summary": "Capital Subsidy financial assistance",
+          "benefitTypes": [
+            "Capital Subsidy"
+          ],
+          "capitalSubsidy": {
+            "minAmountInr": null,
+            "maxAmountInr": null,
+            "maxAmountText": null,
+            "subsidyPercentage": null,
+            "description": "Capital Subsidy up to ₹N/A"
+          }
+        },
+        "requiredDocuments": [
+          {
+            "documentId": "5b2bedee-8819-4460-a802-17c8915156ba-DOC001",
+            "name": "Aadhaar Card of Promoters",
+            "mandatory": "required",
+            "mandatoryText": "Yes",
+            "description": "Required submission document: Aadhaar Card of Promoters"
+          },
+          {
+            "documentId": "5b2bedee-8819-4460-a802-17c8915156ba-DOC002",
+            "name": "Udyam Registration Certificate",
+            "mandatory": "required",
+            "mandatoryText": "Yes",
+            "description": "Required submission document: Udyam Registration Certificate"
+          },
+          {
+            "documentId": "5b2bedee-8819-4460-a802-17c8915156ba-DOC003",
+            "name": "Detailed Project Report (DPR)",
+            "mandatory": "required",
+            "mandatoryText": "Yes",
+            "description": "Required submission document: Detailed Project Report (DPR)"
+          },
+          {
+            "documentId": "5b2bedee-8819-4460-a802-17c8915156ba-DOC004",
+            "name": "Bank Account Statement (6 Months)",
+            "mandatory": "required",
+            "mandatoryText": "Yes",
+            "description": "Required submission document: Bank Account Statement (6 Months)"
+          }
+        ],
+        "applicationProcess": {
+          "onlineUrl": "https://www.dcmsme.gov.in",
+          "modeText": "Online Portal"
+        },
+        "schemeUrl": "https://www.dcmsme.gov.in",
+        "resources": {
+          "officialWebsiteUrl": "https://www.dcmsme.gov.in"
+        },
+        "localization": {
+          "en": {
+            "name": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "summary": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "description": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "benefitsText": "Capital Subsidy financial assistance"
+          },
+          "ta": {
+            "name": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "summary": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "description": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "benefitsText": "Capital Subsidy நிதி உதவி"
+          },
+          "hi": {
+            "name": "मुख्यमंत्री महा-फंड फॉर एंटरप्रेन्योरिशप एंड इनोवेशन (उद्यमशीलता और नवाचार हेतु मुख्यमंत्री महा-िनिध)",
+            "summary": "मुख्यमंत्री महा-फंड फॉर एंटरप्रेन्योरिशप एंड इनोवेशन (उद्यमशीलता और नवाचार हेतु मुख्यमंत्री महा-िनिध)",
+            "description": "Chief Minister Maha-Fund for Entrepreneurship and Innovation",
+            "benefitsText": "Capital Subsidy वित्तीय सहायता"
+          }
+        }
+      }
+    },
+    "updated_at": "2026-10-19T09:01:55.908Z"
   }
 }
