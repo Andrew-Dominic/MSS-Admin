@@ -14,22 +14,42 @@ export interface SchemeOverride {
   updated_at?: string;
 }
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const OVERRIDES_FILE = path.join(DATA_DIR, "catalog_overrides.json");
+let resolvedDataDir = process.env.VERCEL
+  ? path.join("/tmp", "mss-admin-data")
+  : path.join(process.cwd(), "data");
+let resolvedOverridesFile = path.join(resolvedDataDir, "catalog_overrides.json");
 
 function ensureFile() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(OVERRIDES_FILE)) {
-    fs.writeFileSync(OVERRIDES_FILE, JSON.stringify({}, null, 2), "utf8");
+  try {
+    if (!fs.existsSync(resolvedDataDir)) {
+      fs.mkdirSync(resolvedDataDir, { recursive: true });
+    }
+    if (!fs.existsSync(resolvedOverridesFile)) {
+      fs.writeFileSync(resolvedOverridesFile, JSON.stringify({}, null, 2), "utf8");
+    }
+  } catch {
+    // If process.cwd() is read-only (e.g., AWS Lambda / Vercel), fallback to /tmp
+    if (!resolvedDataDir.startsWith("/tmp")) {
+      resolvedDataDir = path.join("/tmp", "mss-admin-data");
+      resolvedOverridesFile = path.join(resolvedDataDir, "catalog_overrides.json");
+      try {
+        if (!fs.existsSync(resolvedDataDir)) {
+          fs.mkdirSync(resolvedDataDir, { recursive: true });
+        }
+        if (!fs.existsSync(resolvedOverridesFile)) {
+          fs.writeFileSync(resolvedOverridesFile, JSON.stringify({}, null, 2), "utf8");
+        }
+      } catch (tmpErr) {
+        console.warn("Could not write to /tmp in serverless environment:", tmpErr);
+      }
+    }
   }
 }
 
 export function getOverrides(): Record<string, SchemeOverride> {
   try {
     ensureFile();
-    const data = fs.readFileSync(OVERRIDES_FILE, "utf8");
+    const data = fs.readFileSync(resolvedOverridesFile, "utf8");
     return JSON.parse(data || "{}");
   } catch (err) {
     console.warn("Could not read catalog_overrides.json:", err);
@@ -47,7 +67,7 @@ export function saveOverride(id: string, override: Partial<SchemeOverride>) {
       id,
       updated_at: new Date().toISOString(),
     };
-    fs.writeFileSync(OVERRIDES_FILE, JSON.stringify(current, null, 2), "utf8");
+    fs.writeFileSync(resolvedOverridesFile, JSON.stringify(current, null, 2), "utf8");
   } catch (err) {
     console.error("Could not write catalog_overrides.json:", err);
   }
@@ -58,7 +78,7 @@ export function removeOverride(id: string) {
     ensureFile();
     const current = getOverrides();
     delete current[id];
-    fs.writeFileSync(OVERRIDES_FILE, JSON.stringify(current, null, 2), "utf8");
+    fs.writeFileSync(resolvedOverridesFile, JSON.stringify(current, null, 2), "utf8");
   } catch (err) {
     console.error("Could not remove from catalog_overrides.json:", err);
   }
