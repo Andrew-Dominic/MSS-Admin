@@ -69,6 +69,7 @@ export function SchemeWizard({ initialData, schemeId, isEdit = false }: SchemeWi
 
   const form = useForm({
     resolver: zodResolver(schemeFormSchema) as any,
+    values: initialData,
     defaultValues: initialData || {
       title: "",
       code: generateStateSchemeCode("All India"),
@@ -378,9 +379,21 @@ export function SchemeWizard({ initialData, schemeId, isEdit = false }: SchemeWi
                   : "Draft official government schemes structured for the Flutter mobile discovery engine."}
               </p>
             </div>
-            <span className="text-sm font-semibold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-xl border border-orange-200">
-              Step {step} of 5
-            </span>
+            <div className="flex items-center gap-3">
+              {isEdit && (
+                <Button
+                  type="button"
+                  onClick={form.handleSubmit(onSubmit)}
+                  disabled={isSubmitting}
+                  className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 font-semibold h-10 px-5 flex items-center gap-2"
+                >
+                  <Check className="w-4 h-4 stroke-[3]" /> {isSubmitting ? "Updating..." : "Save Changes"}
+                </Button>
+              )}
+              <span className="text-sm font-semibold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-xl border border-orange-200">
+                Step {step} of 5
+              </span>
+            </div>
           </div>
 
           {/* Progress Tracker */}
@@ -395,13 +408,16 @@ export function SchemeWizard({ initialData, schemeId, isEdit = false }: SchemeWi
                     <div className="flex flex-col items-center flex-1">
                       <button
                         type="button"
-                        onClick={() => s.id < step && setStep(s.id)}
-                        disabled={s.id > step}
+                        onClick={() => (isEdit || s.id < step) && setStep(s.id)}
+                        disabled={!isEdit && s.id > step}
+                        title={isEdit ? `Jump to Step ${s.id}: ${s.name}` : undefined}
                         className={`h-10 w-10 rounded-2xl flex items-center justify-center transition-all duration-200 ${
                           isPast
                             ? "bg-green-500 text-white shadow-md shadow-green-500/20"
                             : isCurrent
                             ? "border-2 border-orange-500 bg-orange-500 text-white shadow-lg shadow-orange-500/30"
+                            : isEdit
+                            ? "border-2 border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 cursor-pointer"
                             : "border border-gray-200 bg-white text-gray-400"
                         }`}
                       >
@@ -1225,13 +1241,25 @@ export function SchemeWizard({ initialData, schemeId, isEdit = false }: SchemeWi
             )}
 
             {step < 5 ? (
-              <Button
-                type="button"
-                onClick={nextStep}
-                className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 h-11 px-8 font-semibold flex items-center gap-2"
-              >
-                Continue <ChevronRight className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center gap-3">
+                {isEdit && (
+                  <Button
+                    type="button"
+                    onClick={form.handleSubmit(onSubmit)}
+                    disabled={isSubmitting}
+                    className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 h-11 px-6 font-semibold flex items-center gap-2"
+                  >
+                    <Check className="w-4 h-4 stroke-[3]" /> {isSubmitting ? "Updating..." : "Save Changes"}
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  onClick={nextStep}
+                  className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 h-11 px-8 font-semibold flex items-center gap-2"
+                >
+                  Continue <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
             ) : (
               <Button
                 type="submit"

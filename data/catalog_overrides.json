@@ -37,5 +37,44 @@
     },
     "updated_at": "2026-10-19T06:52:07.791Z",
     "isDeleted": true
+  },
+  "334e0c32-11fd-432d-aac9-9dd4bc68534b": {
+    "id": "334e0c32-11fd-432d-aac9-9dd4bc68534b",
+    "scheme_code": "TEST-E2E-997387",
+    "name_en": "[Maharashtra] Autonomous E2E Test Scheme (REVISED & UPDATED)",
+    "state": "Maharashtra",
+    "scheme_type": "Subsidies & Incentives",
+    "status": "DELETED",
+    "is_active": false,
+    "record_json": {
+      "identity": {
+        "id": "334e0c32-11fd-432d-aac9-9dd4bc68534b",
+        "code": "TEST-E2E-997387",
+        "name": "[Maharashtra] Autonomous E2E Test Scheme (REVISED & UPDATED)",
+        "status": "PUBLISHED",
+        "updated_at": "2026-10-19T07:13:17.388Z"
+      },
+      "content": {
+        "classification": {
+          "government": {
+            "level": "state",
+            "states": [
+              "Maharashtra"
+            ],
+            "statesText": "Maharashtra"
+          },
+          "schemeType": "subsidies_and_incentives"
+        },
+        "overview": {
+          "summary": "UPDATED: 35% capital subsidy subsidy rate increased for green MSMEs",
+          "description": "Revised policy parameters matching 2026 industrial directive"
+        },
+        "benefits": {
+          "summary": "₹25,00,000 Capital Subsidy for Micro & Small Enterprises"
+        }
+      }
+    },
+    "updated_at": "2026-10-19T07:13:19.873Z",
+    "isDeleted": true
   }
 }

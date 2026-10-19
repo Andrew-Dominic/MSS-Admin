@@ -3,7 +3,8 @@
 import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { toggleSchemeStatus, deleteScheme } from "@/app/schemes/actions";
+import { toggleSchemeStatus, deleteScheme, quickUpdateScheme } from "@/app/schemes/actions";
+import { STATES, SCHEME_CATEGORIES } from "@/lib/schema/scheme";
 import { 
   Pencil, 
   Trash2, 
@@ -15,7 +16,8 @@ import {
   Loader2, 
   Filter, 
   Search,
-  ExternalLink
+  ExternalLink,
+  SlidersHorizontal
 } from "lucide-react";
 
 export interface SchemeRow {
@@ -45,6 +47,71 @@ export function SchemesTable({ initialSchemes }: SchemesTableProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  // Quick Edit state
+  const [schemeToQuickEdit, setSchemeToQuickEdit] = useState<SchemeRow | null>(null);
+  const [quickEditForm, setQuickEditForm] = useState<{
+    name_en: string;
+    scheme_code: string;
+    state: string;
+    scheme_type: string;
+    status: string;
+  }>({
+    name_en: "",
+    scheme_code: "",
+    state: "All India",
+    scheme_type: "Subsidies & Incentives",
+    status: "PUBLISHED",
+  });
+  const [isQuickSaving, setIsQuickSaving] = useState(false);
+
+  const handleOpenQuickEdit = (scheme: SchemeRow) => {
+    setSchemeToQuickEdit(scheme);
+    setQuickEditForm({
+      name_en: scheme.name_en,
+      scheme_code: scheme.scheme_code,
+      state: scheme.state,
+      scheme_type: scheme.scheme_type,
+      status: scheme.status,
+    });
+  };
+
+  const handleQuickSave = async () => {
+    if (!schemeToQuickEdit) return;
+    setIsQuickSaving(true);
+    setFeedback(null);
+    try {
+      const res = await quickUpdateScheme(schemeToQuickEdit.id, quickEditForm);
+      if (!res.success) {
+        setFeedback({ type: "error", message: res.error || "Failed to update scheme." });
+      } else {
+        setSchemes((prev) =>
+          prev.map((s) =>
+            s.id === schemeToQuickEdit.id
+              ? {
+                  ...s,
+                  name_en: quickEditForm.name_en,
+                  scheme_code: quickEditForm.scheme_code,
+                  state: quickEditForm.state,
+                  scheme_type: quickEditForm.scheme_type,
+                  status: quickEditForm.status,
+                  is_active: quickEditForm.status !== "DISABLED",
+                }
+              : s
+          )
+        );
+        setFeedback({
+          type: "success",
+          message: `Scheme "${quickEditForm.name_en}" successfully updated!`,
+        });
+        setSchemeToQuickEdit(null);
+      }
+    } catch (err: any) {
+      setFeedback({ type: "error", message: err.message || "An unexpected error occurred." });
+    } finally {
+      setIsQuickSaving(false);
+    }
+  };
 
   const [isPending, startTransition] = useTransition();
 
@@ -335,12 +402,23 @@ export function SchemesTable({ initialSchemes }: SchemesTableProps) {
                         )}
                       </Button>
 
-                      {/* Edit Scheme Button */}
+                      {/* Quick Edit Modal Button */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenQuickEdit(scheme)}
+                        title="Quick Edit Scheme"
+                        className="h-9 w-9 p-0 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      >
+                        <SlidersHorizontal className="w-4 h-4" />
+                      </Button>
+
+                      {/* Full Edit Scheme Button */}
                       <Link href={`/schemes/${scheme.id}`}>
                         <Button
                           variant="ghost"
                           size="sm"
-                          title="Edit Scheme Details"
+                          title="Full Scheme Editor (Rules & Translations)"
                           className="h-9 w-9 p-0 rounded-xl text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors"
                         >
                           <Pencil className="w-4 h-4" />
@@ -461,6 +539,136 @@ export function SchemesTable({ initialSchemes }: SchemesTableProps) {
                   </>
                 )}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Edit Modal */}
+      {schemeToQuickEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 space-y-4 border border-gray-100">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 shrink-0">
+                  <SlidersHorizontal className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Quick Edit Scheme</h3>
+                  <p className="text-xs text-gray-500">Edit primary parameters or open the full 5-step wizard.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSchemeToQuickEdit(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 pt-1">
+              <div>
+                <label className="text-xs font-semibold text-gray-700 block mb-1">Scheme Title</label>
+                <input
+                  type="text"
+                  value={quickEditForm.name_en}
+                  onChange={(e) => setQuickEditForm({ ...quickEditForm, name_en: e.target.value })}
+                  className="w-full text-sm rounded-xl border border-gray-200 px-3 py-2 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">Scheme Code</label>
+                  <input
+                    type="text"
+                    value={quickEditForm.scheme_code}
+                    onChange={(e) => setQuickEditForm({ ...quickEditForm, scheme_code: e.target.value })}
+                    className="w-full text-xs font-mono rounded-xl border border-gray-200 px-3 py-2 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">Status</label>
+                  <select
+                    value={quickEditForm.status}
+                    onChange={(e) => setQuickEditForm({ ...quickEditForm, status: e.target.value })}
+                    className="w-full text-xs rounded-xl border border-gray-200 px-3 py-2 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
+                  >
+                    <option value="PUBLISHED">Published (Active)</option>
+                    <option value="DRAFT">Draft (Under Review)</option>
+                    <option value="DISABLED">Disabled (Hidden)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">Target State</label>
+                  <select
+                    value={quickEditForm.state}
+                    onChange={(e) => setQuickEditForm({ ...quickEditForm, state: e.target.value })}
+                    className="w-full text-xs rounded-xl border border-gray-200 px-3 py-2 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    {STATES.map((st) => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">Category</label>
+                  <select
+                    value={quickEditForm.scheme_type}
+                    onChange={(e) => setQuickEditForm({ ...quickEditForm, scheme_type: e.target.value })}
+                    className="w-full text-xs rounded-xl border border-gray-200 px-3 py-2 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    {SCHEME_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between border-t border-gray-100">
+              <Link
+                href={`/schemes/${schemeToQuickEdit.id}`}
+                className="text-xs font-semibold text-orange-600 hover:text-orange-700 hover:underline flex items-center gap-1"
+              >
+                Open Full 5-Step Editor <ExternalLink className="w-3 h-3" />
+              </Link>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isQuickSaving}
+                  onClick={() => setSchemeToQuickEdit(null)}
+                  className="rounded-xl border-gray-200 text-xs font-semibold"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={isQuickSaving}
+                  onClick={handleQuickSave}
+                  className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-orange-500/20"
+                >
+                  {isQuickSaving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" /> Save Changes
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

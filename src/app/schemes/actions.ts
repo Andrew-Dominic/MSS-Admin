@@ -447,6 +447,85 @@ export async function updateScheme(id: string, data: SchemeFormValues) {
 }
 
 /**
+ * Fast inline update for a scheme's primary metadata (name, code, state, category, status)
+ */
+export async function quickUpdateScheme(id: string, updates: {
+  name_en: string;
+  scheme_code: string;
+  state: string;
+  scheme_type: string;
+  status: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabaseAdmin = getAdminClient();
+    const isActive = updates.status !== "DISABLED";
+
+    // 1. Fetch existing scheme record to preserve content/eligibility
+    const { data: existingScheme } = await supabaseAdmin
+      .schema("catalog")
+      .from("scheme")
+      .select("record_json")
+      .eq("id", id)
+      .maybeSingle();
+
+    const recordJson = existingScheme?.record_json || {};
+    if (recordJson.identity) {
+      recordJson.identity.name = updates.name_en;
+      recordJson.identity.code = updates.scheme_code;
+      recordJson.identity.status = isActive ? (updates.status === "PUBLISHED" ? "active" : "draft") : "inactive";
+      recordJson.identity.updated_at = new Date().toISOString();
+    }
+    if (recordJson.content?.classification) {
+      recordJson.content.classification.schemeTypeText = updates.scheme_type;
+      if (recordJson.content.classification.government) {
+        recordJson.content.classification.government.states = updates.state === "All India" ? [] : [updates.state];
+        recordJson.content.classification.government.statesText = updates.state;
+      }
+    }
+
+    // 2. Direct catalog update if exposed
+    const { error: dbError } = await supabaseAdmin
+      .schema("catalog")
+      .from("scheme")
+      .update({
+        name_en: updates.name_en,
+        scheme_code: updates.scheme_code,
+        state: updates.state,
+        scheme_type: updates.scheme_type,
+        status: updates.status,
+        is_active: isActive,
+        record_json: recordJson,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+
+    if (dbError) {
+      console.warn("Direct quickUpdateScheme note:", dbError.message);
+    }
+
+    // 3. Save to catalogOverrides
+    saveOverride(id, {
+      id,
+      name_en: updates.name_en,
+      scheme_code: updates.scheme_code,
+      state: updates.state,
+      scheme_type: updates.scheme_type,
+      status: updates.status,
+      is_active: isActive,
+      record_json: recordJson,
+    });
+
+    revalidatePath("/schemes");
+    revalidatePath(`/schemes/${id}`);
+    revalidatePath("/");
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to update scheme" };
+  }
+}
+
+/**
  * Toggles a scheme's status (e.g. PUBLISHED, DRAFT, DISABLED) and is_active flag
  */
 export async function toggleSchemeStatus(id: string, newStatus: string): Promise<{
