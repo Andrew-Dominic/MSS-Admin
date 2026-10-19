@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { SchemesTable, SchemeRow } from "@/components/schemes/SchemesTable";
+import { getOverrides } from "@/lib/catalogOverrides";
 
 export const revalidate = 0; // Disable caching for this page
 
@@ -15,25 +16,51 @@ export default async function SchemesPage() {
   let schemeList: SchemeRow[] = [];
 
   try {
+    const overrides = getOverrides();
     const { data: searchData, error } = await supabaseAdmin.rpc("mss_search_data");
-    if (!error && Array.isArray(searchData) && searchData.length > 0) {
-      schemeList = searchData.map((item: any) => {
-        const profile = item.search_record?.schemeSearchProfile || {};
-        const statusRaw = (item.scheme_record?.identity?.status || "active").toUpperCase();
-        let status = statusRaw;
-        if (statusRaw === "ACTIVE") status = "PUBLISHED";
-        else if (statusRaw === "INACTIVE") status = "DISABLED";
 
-        return {
-          id: item.scheme_id,
-          scheme_code: profile.schemeId || item.scheme_id,
-          name_en: item.name_en || profile.name || item.scheme_id,
-          state: profile.districts?.[0] || "All India",
-          scheme_type: profile.sector || "General",
-          status,
-          is_active: status !== "DISABLED",
-        };
-      });
+    if (!error && Array.isArray(searchData) && searchData.length > 0) {
+      schemeList = searchData
+        .map((item: any) => {
+          const profile = item.search_record?.schemeSearchProfile || {};
+          const ov = overrides[item.scheme_id];
+
+          // Exclude deleted schemes
+          if (ov?.isDeleted) {
+            return null;
+          }
+
+          const defaultStatusRaw = (item.scheme_record?.identity?.status || "active").toUpperCase();
+          let status = ov?.status || defaultStatusRaw;
+          if (status === "ACTIVE") status = "PUBLISHED";
+          else if (status === "INACTIVE") status = "DISABLED";
+
+          return {
+            id: item.scheme_id,
+            scheme_code: ov?.scheme_code || profile.schemeId || item.scheme_id,
+            name_en: ov?.name_en || item.name_en || profile.name || item.scheme_id,
+            state: ov?.state || profile.districts?.[0] || "All India",
+            scheme_type: ov?.scheme_type || profile.sector || "General",
+            status,
+            is_active: ov?.is_active !== undefined ? ov.is_active : status !== "DISABLED",
+          };
+        })
+        .filter(Boolean) as SchemeRow[];
+
+      // Prepend any newly drafted schemes from overrides that aren't yet in searchData
+      for (const [id, ov] of Object.entries(overrides)) {
+        if (!ov.isDeleted && !schemeList.some((s) => s.id === id)) {
+          schemeList.unshift({
+            id,
+            scheme_code: ov.scheme_code || id,
+            name_en: ov.name_en || "Draft Scheme",
+            state: ov.state || "All India",
+            scheme_type: ov.scheme_type || "Subsidies & Incentives",
+            status: ov.status || "DRAFT",
+            is_active: ov.is_active !== undefined ? ov.is_active : true,
+          });
+        }
+      }
     } else if (error) {
       console.warn("mss_search_data RPC error:", error.message);
     }
