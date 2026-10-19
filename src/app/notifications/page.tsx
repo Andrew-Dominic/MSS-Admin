@@ -3,6 +3,7 @@ import { BroadcastForm } from "@/components/notifications/BroadcastForm";
 import { PromoAlertsManager } from "@/components/notifications/PromoAlertsManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell, History, Users } from "lucide-react";
+import { formatDateTime } from "@/lib/dateUtils";
 
 export const revalidate = 0; // Disable caching
 
@@ -75,11 +76,8 @@ export default async function NotificationsPage() {
                           {b.recipient_count} user(s)
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-xs text-gray-400">
-                        {new Date(b.created_at).toLocaleString("en-IN", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
+                      <td className="px-6 py-4 text-xs text-gray-400 font-mono" suppressHydrationWarning>
+                        {formatDateTime(b.created_at)}
                       </td>
                     </tr>
                   ))

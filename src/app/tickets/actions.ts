@@ -2,6 +2,7 @@
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { requireAdminAuth } from '@/lib/authGuard';
 
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 
@@ -51,6 +52,7 @@ export async function updateTicketStatus(
   newStatus: TicketStatus
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await requireAdminAuth();
     const validStatuses: TicketStatus[] = ['open', 'in_progress', 'resolved', 'closed'];
     if (!validStatuses.includes(newStatus)) {
       return { success: false, error: `Invalid status: ${newStatus}` };

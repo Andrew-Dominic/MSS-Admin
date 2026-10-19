@@ -15,6 +15,7 @@ import {
 } from "@/lib/schema/scheme";
 import { saveOverride, getOverrides } from "@/lib/catalogOverrides";
 import { revalidatePath } from "next/cache";
+import { requireAdminAuth } from "@/lib/authGuard";
 import crypto from "crypto";
 
 function computeSha256(content: string): string {
@@ -178,6 +179,7 @@ function buildCatalogRecordJson(
  * Submits a new scheme draft into catalog.scheme and catalog.content
  */
 export async function submitSchemeDraft(data: SchemeFormValues) {
+  await requireAdminAuth();
   const supabase = await createClient();
 
   const result = schemeFormSchema.safeParse(data);
@@ -329,6 +331,7 @@ export async function submitSchemeDraft(data: SchemeFormValues) {
  * Updates an existing scheme in catalog.scheme and catalog.content
  */
 export async function updateScheme(id: string, data: SchemeFormValues) {
+  await requireAdminAuth();
   const supabase = await createClient();
 
   const result = schemeFormSchema.safeParse(data);
@@ -457,6 +460,7 @@ export async function quickUpdateScheme(id: string, updates: {
   status: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    await requireAdminAuth();
     const supabaseAdmin = getAdminClient();
     const isActive = updates.status !== "DISABLED";
 
@@ -536,6 +540,7 @@ export async function toggleSchemeStatus(id: string, newStatus: string): Promise
   error?: string;
 }> {
   try {
+    await requireAdminAuth();
     const supabaseAdmin = getAdminClient();
     const isActive = newStatus !== "DISABLED";
 
@@ -601,6 +606,7 @@ export async function deleteScheme(id: string): Promise<{
   error?: string;
 }> {
   try {
+    await requireAdminAuth();
     const supabaseAdmin = getAdminClient();
 
     // 1. Attempt Supabase direct delete

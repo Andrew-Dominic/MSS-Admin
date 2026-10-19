@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { 
@@ -121,6 +121,14 @@ export function SchemeWizard({ initialData, schemeId, isEdit = false }: SchemeWi
 
   const currentState = formValues.isCentral ? "All India" : formValues.targetState;
   const currentStateConfig = getStateConfig(currentState);
+
+  useEffect(() => {
+    if (currentState === "All India" && activeLangTab === "ta") {
+      setActiveLangTab("hi");
+    } else if (currentState === "Tamil Nadu" && activeLangTab === "hi") {
+      setActiveLangTab("ta");
+    }
+  }, [currentState]);
 
   const handleStateChange = (newState: string, force = false) => {
     setValue("targetState", newState as any, { shouldValidate: true, shouldDirty: true });
@@ -977,11 +985,12 @@ export function SchemeWizard({ initialData, schemeId, isEdit = false }: SchemeWi
                 </Button>
               </div>
 
-              <div className="flex border-b border-gray-200 gap-2">
+              {/* Dynamic State-Targeted Language Tabs */}
+              <div className="flex border-b border-gray-200 gap-2 overflow-x-auto">
                 <button
                   type="button"
                   onClick={() => setActiveLangTab("en")}
-                  className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-all ${
+                  className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
                     activeLangTab === "en"
                       ? "border-orange-500 text-orange-600"
                       : "border-transparent text-gray-500 hover:text-gray-800"
@@ -989,28 +998,38 @@ export function SchemeWizard({ initialData, schemeId, isEdit = false }: SchemeWi
                 >
                   English (Primary)
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveLangTab("ta")}
-                  className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-all ${
-                    activeLangTab === "ta"
-                      ? "border-orange-500 text-orange-600"
-                      : "border-transparent text-gray-500 hover:text-gray-800"
-                  }`}
-                >
-                  தமிழ் (Tamil)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveLangTab("hi")}
-                  className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-all ${
-                    activeLangTab === "hi"
-                      ? "border-orange-500 text-orange-600"
-                      : "border-transparent text-gray-500 hover:text-gray-800"
-                  }`}
-                >
-                  हिन्दी (Hindi)
-                </button>
+
+                {(currentState === "Tamil Nadu" || formValues.targetState === "Tamil Nadu") && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveLangTab("ta")}
+                    className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+                      activeLangTab === "ta"
+                        ? "border-orange-500 text-orange-600"
+                        : "border-transparent text-gray-500 hover:text-gray-800"
+                    }`}
+                  >
+                    தமிழ் (Tamil - State Language)
+                  </button>
+                )}
+
+                {(currentState === "All India" || currentState === "Maharashtra" || currentStateConfig.languageCode === "hi" || currentStateConfig.languageCode === "mr" || currentState !== "Tamil Nadu") && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveLangTab("hi")}
+                    className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+                      activeLangTab === "hi"
+                        ? "border-orange-500 text-orange-600"
+                        : "border-transparent text-gray-500 hover:text-gray-800"
+                    }`}
+                  >
+                    {currentState === "Maharashtra" 
+                      ? "मराठी / हिन्दी (Devanagari)" 
+                      : currentState === "All India" 
+                      ? "हिन्दी (National Hindi)" 
+                      : `हिन्दी (${currentStateConfig.languageName})`}
+                  </button>
+                )}
               </div>
 
               {/* English Tab */}

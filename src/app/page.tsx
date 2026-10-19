@@ -2,6 +2,9 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { resolveSchemeCategory } from "@/lib/schema/scheme";
+import { getOverrides } from "@/lib/catalogOverrides";
+import { formatDate } from "@/lib/dateUtils";
 
 export const revalidate = 0; // Disable caching
 
@@ -18,22 +21,47 @@ export default async function DashboardPage() {
   let recentSchemes: any[] = [];
 
   try {
+    const overrides = getOverrides();
     const { data: searchData, error } = await supabaseAdmin.rpc('mss_search_data');
     if (!error && Array.isArray(searchData) && searchData.length > 0) {
-      const allSchemes = searchData.map((item: any) => {
-        const profile = item.search_record?.schemeSearchProfile || {};
-        const statusRaw = (item.scheme_record?.identity?.status || 'active').toUpperCase();
-        const status = statusRaw === 'ACTIVE' ? 'PUBLISHED' : statusRaw;
-        return {
-          id: item.scheme_id,
-          scheme_code: item.scheme_id,
-          name_en: item.name_en || profile.name || item.scheme_id,
-          state: profile.districts?.[0] || 'All India',
-          scheme_type: profile.sector || 'General',
-          status,
-          updated_at: item.scheme_record?.identity?.updated_at || new Date().toISOString(),
-        };
-      });
+      const allSchemes = searchData
+        .map((item: any) => {
+          const profile = item.search_record?.schemeSearchProfile || {};
+          const ov = overrides[item.scheme_id];
+          const nameEn = ov?.name_en || item.name_en || profile.name || item.scheme_id;
+
+          // Exclude test records and deleted items from dashboard stats
+          if (
+            ov?.isDeleted ||
+            nameEn.toLowerCase().includes("test scheme") ||
+            nameEn.toLowerCase().includes("autonomous e2e")
+          ) {
+            return null;
+          }
+
+          const defaultStatusRaw = (item.scheme_record?.identity?.status || 'active').toUpperCase();
+          let status = ov?.status || defaultStatusRaw;
+          if (status === 'ACTIVE') status = 'PUBLISHED';
+          else if (status === 'INACTIVE') status = 'DISABLED';
+
+          const rawCode = ov?.scheme_code || profile.schemeId || item.scheme_record?.identity?.code || item.scheme_id;
+          const schemeCode = (rawCode && !rawCode.includes("-"))
+            ? rawCode
+            : (rawCode ? `SCH${rawCode.replace(/-/g, "").slice(0, 6).toUpperCase()}` : "SCH000001");
+
+          const schemeType = resolveSchemeCategory(item.scheme_record, profile, ov);
+
+          return {
+            id: item.scheme_id,
+            scheme_code: schemeCode,
+            name_en: nameEn,
+            state: ov?.state || profile.districts?.[0] || 'All India',
+            scheme_type: schemeType,
+            status,
+            updated_at: item.scheme_record?.identity?.updated_at || new Date().toISOString(),
+          };
+        })
+        .filter(Boolean) as any[];
 
       totalSchemes = allSchemes.length;
       activePublished = allSchemes.filter((s: any) => s.status === 'PUBLISHED').length;
@@ -44,19 +72,23 @@ export default async function DashboardPage() {
       const { data: dbSchemes, error: dbError } = await supabaseAdmin
         .schema('catalog')
         .from('scheme')
-        .select('id, scheme_code, name_en, state, scheme_type, status, updated_at')
+        .select('id, scheme_code, name_en, state, scheme_type, status, updated_at, record_json')
         .order('updated_at', { ascending: false });
 
       if (!dbError && Array.isArray(dbSchemes)) {
-        totalSchemes = dbSchemes.length;
-        activePublished = dbSchemes.filter((s: any) => (s.status || '').toUpperCase() === 'PUBLISHED').length;
-        draftsPending = dbSchemes.filter((s: any) => (s.status || '').toUpperCase() === 'DRAFT').length;
-        recentSchemes = dbSchemes.slice(0, 4).map((s: any) => ({
+        const filtered = dbSchemes.filter((s: any) => 
+          !s.name_en?.toLowerCase().includes("test scheme") &&
+          !s.name_en?.toLowerCase().includes("autonomous e2e")
+        );
+        totalSchemes = filtered.length;
+        activePublished = filtered.filter((s: any) => (s.status || '').toUpperCase() === 'PUBLISHED').length;
+        draftsPending = filtered.filter((s: any) => (s.status || '').toUpperCase() === 'DRAFT').length;
+        recentSchemes = filtered.slice(0, 4).map((s: any) => ({
           id: s.id,
-          scheme_code: s.scheme_code || s.id,
+          scheme_code: s.scheme_code || `SCH${s.id.slice(0, 6).toUpperCase()}`,
           name_en: s.name_en,
           state: s.state || 'All India',
-          scheme_type: s.scheme_type || 'General',
+          scheme_type: resolveSchemeCategory(s.record_json, null, null, s.scheme_type),
           status: s.status || 'DRAFT',
           updated_at: s.updated_at || new Date().toISOString(),
         }));
@@ -195,7 +227,7 @@ export default async function DashboardPage() {
                           {scheme.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-gray-500">{new Date(scheme.updated_at).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 text-gray-500 font-mono text-xs">{formatDate(scheme.updated_at)}</td>
                       <td className="px-6 py-4 text-right">
                         <Link href={`/schemes/${scheme.id}`}>
                           <Button size="sm" className="h-8 px-3 rounded-lg bg-orange-50 hover:bg-orange-500 text-orange-700 hover:text-white border border-orange-200 text-xs font-semibold shadow-none transition-all">
@@ -235,24 +267,24 @@ export default async function DashboardPage() {
                   <p className="text-xs text-gray-500 mt-1">Directly submitted by citizens via Help &amp; Support.</p>
                 </div>
               </Link>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-orange-50 shrink-0 flex items-center justify-center text-orange-500">
+              <Link href="/schemes" className="flex gap-4 group cursor-pointer hover:bg-gray-50/80 p-2 rounded-2xl -mx-2 transition-colors">
+                <div className="w-10 h-10 rounded-full bg-orange-50 shrink-0 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900">Review {draftsPending || 0} Drafts</h4>
+                  <h4 className="text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">Review {draftsPending || 0} Drafts</h4>
                   <p className="text-xs text-gray-500 mt-1">Pending approval from content team before publishing.</p>
                 </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-blue-50 shrink-0 flex items-center justify-center text-blue-500">
+              </Link>
+              <Link href="/releases" className="flex gap-4 group cursor-pointer hover:bg-gray-50/80 p-2 rounded-2xl -mx-2 transition-colors">
+                <div className="w-10 h-10 rounded-full bg-blue-50 shrink-0 flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900">Publish Catalog v1.34</h4>
-                  <p className="text-xs text-gray-500 mt-1">New scheme updates are ready to be synced to mobile clients.</p>
+                  <h4 className="text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">Publish Catalog v1.34 &rarr;</h4>
+                  <p className="text-xs text-gray-500 mt-1">Manage OTA release packages and push updates to mobile devices.</p>
                 </div>
-              </div>
+              </Link>
             </div>
           </CardContent>
         </Card>

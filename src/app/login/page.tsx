@@ -4,14 +4,22 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 
-export default function LoginPage({ searchParams }: { searchParams: { error: string } }) {
+export default async function LoginPage({ 
+  searchParams 
+}: { 
+  searchParams: Promise<{ error?: string; redirectTo?: string }> 
+}) {
+  const params = await searchParams;
+  const error = params?.error;
+  const redirectTo = params?.redirectTo || '/';
+
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-[#F4F7F9] relative overflow-hidden font-sans">
+    <div className="flex min-h-screen w-full items-center justify-center bg-[#F4F7F9] relative overflow-hidden font-sans p-4">
       {/* Background decorative elements */}
       <div className="absolute top-[-10%] left-[-10%] h-[40%] w-[40%] rounded-full bg-orange-500/10 blur-[120px]" />
       <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-blue-500/10 blur-[120px]" />
 
-      <Card className="z-10 w-full max-w-md border-none bg-white/80 backdrop-blur-xl shadow-[0px_20px_60px_rgba(0,0,0,0.05)] rounded-3xl">
+      <Card className="z-10 w-full max-w-md border-none bg-white/95 backdrop-blur-xl shadow-[0px_20px_60px_rgba(0,0,0,0.08)] rounded-3xl">
         <CardHeader className="space-y-2 text-center pb-8 pt-10">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500 mb-4 shadow-lg shadow-orange-500/20">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 text-white"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -20,15 +28,16 @@ export default function LoginPage({ searchParams }: { searchParams: { error: str
             Admin Portal
           </CardTitle>
           <CardDescription className="text-gray-500 font-medium">
-            Sign in to manage IN Schemes
+            Sign in to manage MSME Schemes
           </CardDescription>
         </CardHeader>
         
         <form action={login}>
+          <input type="hidden" name="redirectTo" value={redirectTo} />
           <CardContent className="space-y-6 px-10">
-            {searchParams?.error && (
+            {error && (
               <div className="rounded-xl bg-red-50 p-4 text-sm text-red-600 border border-red-100 text-center font-medium">
-                {searchParams.error}
+                {error}
               </div>
             )}
             

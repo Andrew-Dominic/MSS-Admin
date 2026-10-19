@@ -243,7 +243,7 @@ export function SchemesTable({ initialSchemes }: SchemesTableProps) {
       )}
 
       {/* Filter and Search Bar */}
-      <div className="border-b border-gray-100 pb-4 px-6 pt-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="border-b border-gray-100 pb-4 px-4 sm:px-6 pt-4 sm:pt-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3 pointer-events-none" />
           <input
@@ -302,8 +302,8 @@ export function SchemesTable({ initialSchemes }: SchemesTableProps) {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
+      <div className="overflow-x-auto -mx-1 sm:mx-0">
+        <table className="w-full min-w-[760px] text-sm text-left">
           <thead className="text-xs text-gray-500 bg-gray-50/50 uppercase tracking-wider">
             <tr>
               <th className="px-5 py-3.5 font-semibold">Scheme Code & Name</th>

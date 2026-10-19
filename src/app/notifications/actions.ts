@@ -2,6 +2,7 @@
 
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+import { requireAdminAuth } from "@/lib/authGuard";
 
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -59,6 +60,7 @@ export async function dispatchBroadcastNotification(input: BroadcastNotification
   error?: string;
 }> {
   try {
+    await requireAdminAuth();
     const supabase = getAdminClient();
 
     // 1. Query target profiles
@@ -199,6 +201,7 @@ export async function createPromoAlert(payload: {
   badge_text_color?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    await requireAdminAuth();
     const supabase = getAdminClient();
 
     const { error } = await supabase.from("promo_alerts").insert({
@@ -233,6 +236,7 @@ export async function createPromoAlert(payload: {
  */
 export async function deletePromoAlert(alertId: string): Promise<{ success: boolean; error?: string }> {
   try {
+    await requireAdminAuth();
     const supabase = getAdminClient();
     const { error } = await supabase.from("promo_alerts").delete().eq("id", alertId);
 

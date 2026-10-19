@@ -5,6 +5,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SupportTicket, TicketStatus, updateTicketStatus } from "@/app/tickets/actions";
+import { formatDateTime } from "@/lib/dateUtils";
 
 interface TicketsTableProps {
   initialTickets: SupportTicket[];
@@ -295,14 +296,8 @@ export function TicketsTable({ initialTickets }: TicketsTableProps) {
                     <div className="font-mono text-xs font-semibold text-gray-900">
                       {ticket.id.slice(0, 8)}...
                     </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      {new Date(ticket.created_at).toLocaleDateString("en-IN", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                    <div className="text-xs text-gray-400 mt-1 font-mono" suppressHydrationWarning>
+                      {formatDateTime(ticket.created_at)}
                     </div>
                   </td>
 
@@ -476,8 +471,8 @@ export function TicketsTable({ initialTickets }: TicketsTableProps) {
                 </div>
                 <div>
                   <span className="text-gray-400 block mb-0.5">Submitted On</span>
-                  <span className="font-semibold text-gray-900">
-                    {new Date(activeTicket.created_at).toLocaleString("en-IN")}
+                  <span className="font-semibold text-gray-900 font-mono text-sm" suppressHydrationWarning>
+                    {formatDateTime(activeTicket.created_at)}
                   </span>
                 </div>
                 {activeTicket.user_id && (

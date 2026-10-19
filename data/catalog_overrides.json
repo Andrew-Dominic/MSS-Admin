@@ -79,21 +79,25 @@
   },
   "036e2e62-af50-482f-9404-f728f29a617c": {
     "id": "036e2e62-af50-482f-9404-f728f29a617c",
-    "scheme_code": "036e2e62-af50-482f-9404-f728f29a617c",
+    "scheme_code": "SCH036E2E",
     "name_en": "Test Fresh Scheme",
     "state": "All India",
     "scheme_type": "Subsidies & Incentives",
-    "status": "DISABLED",
+    "status": "DELETED",
     "is_active": false,
     "record_json": {},
-    "updated_at": "2026-10-19T08:42:09.397Z"
+    "updated_at": "2026-10-19T08:42:09.397Z",
+    "isDeleted": true
   },
   "32a84b33-dc30-4fad-81a2-f9254513224c": {
     "id": "32a84b33-dc30-4fad-81a2-f9254513224c",
-    "status": "DISABLED",
+    "scheme_code": "SCH32A84B",
+    "name_en": "[Maharashtra] Test Scheme with NULL changed_by",
+    "status": "DELETED",
     "is_active": false,
     "record_json": {},
-    "updated_at": "2026-10-19T07:42:34.836Z"
+    "updated_at": "2026-10-19T07:42:34.836Z",
+    "isDeleted": true
   },
   "6ead506f-cca5-4aca-bfe5-89bd3cd57385": {
     "id": "6ead506f-cca5-4aca-bfe5-89bd3cd57385",
