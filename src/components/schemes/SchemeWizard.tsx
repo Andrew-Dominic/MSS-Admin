@@ -15,8 +15,13 @@ import {
   ExternalLink,
   Sparkles,
   Plus,
-  Trash2
+  Trash2,
+  ArrowLeft,
+  RefreshCw,
+  MapPin,
+  Info
 } from "lucide-react";
+import Link from "next/link";
 import { 
   schemeFormSchema, 
   SchemeFormValues, 
@@ -28,7 +33,12 @@ import {
   APPLICATION_MODES,
   EDUCATION_LEVELS
 } from "@/lib/schema/scheme";
-import { submitSchemeDraft } from "@/app/schemes/actions";
+import { 
+  getStateConfig, 
+  generateStateSchemeCode, 
+  getStateLanguage 
+} from "@/lib/constants/stateRegistry";
+import { submitSchemeDraft, updateScheme } from "@/app/schemes/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,7 +53,13 @@ const STEPS = [
   { id: 5, name: "Preview & Submit", icon: FileText },
 ];
 
-export function SchemeWizard() {
+export interface SchemeWizardProps {
+  initialData?: SchemeFormValues;
+  schemeId?: string;
+  isEdit?: boolean;
+}
+
+export function SchemeWizard({ initialData, schemeId, isEdit = false }: SchemeWizardProps = {}) {
   const [step, setStep] = useState(1);
   const [activeLangTab, setActiveLangTab] = useState<"en" | "ta" | "hi">("en");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,16 +69,16 @@ export function SchemeWizard() {
 
   const form = useForm({
     resolver: zodResolver(schemeFormSchema) as any,
-    defaultValues: {
+    defaultValues: initialData || {
       title: "",
-      code: "",
+      code: generateStateSchemeCode("All India"),
       category: "Subsidies & Incentives",
-      sponsoringAuthority: "",
+      sponsoringAuthority: "Ministry of MSME / KVIC / DC-MSME",
       ministry: "Ministry of Micro, Small & Medium Enterprises",
-      implementingAgency: "",
+      implementingAgency: "District Industries Centres (DIC) / State KVIC / Coir Board",
       targetState: "All India",
       isCentral: true,
-      schemeUrl: "",
+      schemeUrl: "https://www.dcmsme.gov.in",
       applicationMode: "Online Portal",
       genderTarget: "All",
       educationLevel: [],
@@ -99,6 +115,147 @@ export function SchemeWizard() {
 
   const { register, watch, setValue, trigger } = form;
   const formValues = watch();
+
+  const [autoAssignmentBanner, setAutoAssignmentBanner] = useState<string | null>(null);
+
+  const currentState = formValues.isCentral ? "All India" : formValues.targetState;
+  const currentStateConfig = getStateConfig(currentState);
+
+  const handleStateChange = (newState: string, force = false) => {
+    setValue("targetState", newState as any, { shouldValidate: true, shouldDirty: true });
+
+    const config = getStateConfig(newState);
+    const lang = getStateLanguage(newState);
+    const generatedCode = generateStateSchemeCode(newState);
+
+    // Auto-prefix/update Scheme Code
+    const currentCode = form.getValues("code");
+    if (!currentCode || currentCode === "" || currentCode.includes("MSME") || force || !isEdit) {
+      setValue("code", generatedCode, { shouldValidate: true, shouldDirty: true });
+    }
+
+    // Auto-prefix/update Scheme Title
+    const currentTitle = form.getValues("title");
+    if (!currentTitle || currentTitle.trim() === "" || force) {
+      setValue("title", config.sampleTitle, { shouldValidate: true, shouldDirty: true });
+    } else {
+      const statePrefixRegex = /^\[([^\]]+)\]\s*/;
+      if (statePrefixRegex.test(currentTitle)) {
+        if (newState === "All India") {
+          setValue("title", currentTitle.replace(statePrefixRegex, ""), { shouldValidate: true, shouldDirty: true });
+        } else {
+          setValue("title", currentTitle.replace(statePrefixRegex, `[${newState}] `), { shouldValidate: true, shouldDirty: true });
+        }
+      } else if (newState !== "All India" && !currentTitle.startsWith(`[${newState}]`)) {
+        setValue("title", `[${newState}] ${currentTitle}`, { shouldValidate: true, shouldDirty: true });
+      }
+    }
+
+    // Auto-fill Nodal Ministry
+    const currentMinistry = form.getValues("ministry");
+    if (
+      !currentMinistry ||
+      currentMinistry === "" ||
+      currentMinistry.includes("Ministry of Micro") ||
+      currentMinistry.includes("Department of Industries") ||
+      currentMinistry.includes("Government of") ||
+      force ||
+      !isEdit
+    ) {
+      setValue("ministry", config.ministry, { shouldValidate: true, shouldDirty: true });
+    }
+
+    // Auto-fill Sponsoring Authority
+    const currentAuthority = form.getValues("sponsoringAuthority");
+    if (
+      !currentAuthority ||
+      currentAuthority === "" ||
+      currentAuthority.includes("Ministry of MSME") ||
+      currentAuthority.includes("Directorate of Industries") ||
+      currentAuthority.includes("Commissioner of Industries") ||
+      force ||
+      !isEdit
+    ) {
+      setValue("sponsoringAuthority", config.authority, { shouldValidate: true, shouldDirty: true });
+    }
+
+    // Auto-fill Implementing Agency
+    const currentAgency = form.getValues("implementingAgency");
+    if (
+      !currentAgency ||
+      currentAgency === "" ||
+      currentAgency.includes("District Industries Centres") ||
+      force ||
+      !isEdit
+    ) {
+      setValue("implementingAgency", config.implementingAgency, { shouldValidate: true, shouldDirty: true });
+    }
+
+    // Auto-fill Portal URL
+    const currentUrl = form.getValues("schemeUrl");
+    if (
+      !currentUrl ||
+      currentUrl === "" ||
+      currentUrl.includes("dcmsme.gov.in") ||
+      currentUrl.includes(".gov.in") ||
+      force ||
+      !isEdit
+    ) {
+      setValue("schemeUrl", config.portalUrl, { shouldValidate: true, shouldDirty: true });
+    }
+
+    setAutoAssignmentBanner(
+      `Auto-assigned ${newState} profile: Code (${generatedCode}), Nodal Department & Language detected: ${lang.name} (${lang.native})`
+    );
+  };
+
+  const handleCentralToggle = (checked: boolean) => {
+    setValue("isCentral", checked, { shouldValidate: true, shouldDirty: true });
+    if (checked) {
+      handleStateChange("All India", false);
+    } else {
+      // Default directly to Maharashtra when unchecking Central Pan-India
+      handleStateChange("Maharashtra", false);
+    }
+  };
+
+  const handlePreFillLocalizationTemplates = () => {
+    const state = formValues.isCentral ? "All India" : formValues.targetState;
+    const config = getStateConfig(state);
+    const englishTitle = formValues.title || config.sampleTitle;
+
+    // Pre-fill Tamil
+    if (!formValues.titleTa) {
+      if (state === "Maharashtra") {
+        setValue("titleTa", `[மகாராஷ்டிரா] ${englishTitle}`, { shouldDirty: true });
+        setValue("summaryTa", `மகாராஷ்டிரா தொழில் துறையால் சிறு, குறு மற்றும் நடுத்தர தொழில் நிறுவனங்களுக்கு (MSME) வழங்கப்படும் முதலீட்டு மானியம் மற்றும் தொழில் உதவித் திட்டம்.`, { shouldDirty: true });
+        setValue("benefitsTa", `தகுதியுள்ள MSME நிறுவனங்களுக்கு மூலதன மானியம் (Capital Subsidy) மற்றும் வட்டிச் சலுகை உதவி வழங்கப்படுகிறது.`, { shouldDirty: true });
+      } else if (state === "Tamil Nadu") {
+        setValue("titleTa", `[தமிழ்நாடு] புதிய தொழில் முனைவோர் மற்றும் தொழில் நிறுவன மேம்பாட்டு திட்டம் (NEEDS)`, { shouldDirty: true });
+        setValue("summaryTa", `தமிழ்நாடு தொழில் வணிக ஆணையரகத்தால் வழங்கப்படும் சிறப்பு முதலீட்டு மானியத் திட்டம்.`, { shouldDirty: true });
+        setValue("benefitsTa", `திட்ட மதிப்பீட்டில் 25% வரை முதலீட்டு மானியம் மற்றும் 3% வட்டி மானியம்.`, { shouldDirty: true });
+      } else {
+        setValue("titleTa", `[${state}] ${englishTitle}`, { shouldDirty: true });
+        setValue("summaryTa", `${state} மாநில தொழில் துறையால் வழங்கப்படும் MSME நிதி உதவி திட்டம்.`, { shouldDirty: true });
+        setValue("benefitsTa", `தகுதியுள்ள குறு மற்றும் சிறு தொழில் முனைவோருக்கு அரசு மானியம்.`, { shouldDirty: true });
+      }
+    }
+
+    // Pre-fill Hindi / Marathi (Devanagari)
+    if (!formValues.titleHi) {
+      if (state === "Maharashtra") {
+        setValue("titleHi", `[महाराष्ट्र] ${englishTitle}`, { shouldDirty: true });
+        setValue("summaryHi", `महाराष्ट्र शासनाच्या उद्योग संचालनालयाद्वारे सूक्ष्म, लघु आणि मध्यम उद्योगांसाठी (MSME) विशेष आर्थिक व अनुदान सहाय्य योजना.`, { shouldDirty: true });
+        setValue("benefitsHi", `पात्र एमएसएमई उद्योगांना भांडवली अनुदान (Capital Subsidy) आणि व्याज सवलत सहाय्य उपलब्ध.`, { shouldDirty: true });
+      } else {
+        setValue("titleHi", `[${state}] ${englishTitle}`, { shouldDirty: true });
+        setValue("summaryHi", `${state} राज्य उद्योग विभाग द्वारा सूक्ष्म, लघु एवं मध्यम उद्यमों (MSME) हेतु विशेष वित्तीय एवं सब्सिडी सहायता योजना।`, { shouldDirty: true });
+        setValue("benefitsHi", `पात्र एमएसएमई इकाइयों को पूंजीगत सब्सिडी एवं ऋण सहायता उपलब्ध।`, { shouldDirty: true });
+      }
+    }
+
+    setAutoAssignmentBanner(`Pre-filled localized regional templates for ${state} (${config.languageName})`);
+  };
 
   const handleAddDocument = () => {
     if (!customDocInput.trim()) return;
@@ -158,11 +315,18 @@ export function SchemeWizard() {
     setErrorMsg("");
     setSuccessMsg("");
     try {
-      const res = await submitSchemeDraft(data);
+      const res = isEdit && schemeId
+        ? await updateScheme(schemeId, data)
+        : await submitSchemeDraft(data);
+
       if (res?.error) {
         setErrorMsg(res.error);
       } else {
-        setSuccessMsg(`Scheme draft "${data.title}" (${data.code}) successfully saved to Supabase Catalog!`);
+        setSuccessMsg(
+          isEdit
+            ? `Scheme "${data.title}" (${data.code}) successfully updated in Supabase Catalog!`
+            : `Scheme draft "${data.title}" (${data.code}) successfully saved to Supabase Catalog!`
+        );
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     } catch (err: any) {
@@ -173,95 +337,133 @@ export function SchemeWizard() {
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto my-8 border-none bg-white rounded-3xl shadow-[0px_20px_60px_rgba(0,0,0,0.06)] overflow-hidden transition-all duration-300">
-      <CardHeader className="border-b border-gray-100 pb-8 px-10 pt-10 bg-gradient-to-r from-orange-50/50 via-white to-blue-50/30">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
-                Catalog v3.1 Compliant
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
-                Trilingual (en/ta/hi)
-              </span>
-            </div>
-            <CardTitle className="text-2xl font-bold text-gray-900">Add New Scheme Draft</CardTitle>
-            <p className="text-sm text-gray-500 mt-1">
-              Draft official government schemes structured for the Flutter mobile discovery engine.
-            </p>
-          </div>
-          <span className="text-sm font-semibold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-xl border border-orange-200">
-            Step {step} of 5
+    <div className="space-y-4">
+      <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <Link
+          href="/schemes"
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-orange-600 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Schemes Catalog
+        </Link>
+        {isEdit && schemeId && (
+          <span className="font-mono text-xs px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg border border-gray-200">
+            ID: {schemeId}
           </span>
-        </div>
-
-        {/* Progress Tracker */}
-        <nav aria-label="Progress">
-          <ol role="list" className="flex items-center justify-between w-full">
-            {STEPS.map((s, stepIdx) => {
-              const Icon = s.icon;
-              const isPast = s.id < step;
-              const isCurrent = s.id === step;
-              return (
-                <li key={s.name} className="flex-1 flex items-center">
-                  <div className="flex flex-col items-center flex-1">
-                    <button
-                      type="button"
-                      onClick={() => s.id < step && setStep(s.id)}
-                      disabled={s.id > step}
-                      className={`h-10 w-10 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-                        isPast
-                          ? "bg-green-500 text-white shadow-md shadow-green-500/20"
-                          : isCurrent
-                          ? "border-2 border-orange-500 bg-orange-500 text-white shadow-lg shadow-orange-500/30"
-                          : "border border-gray-200 bg-white text-gray-400"
-                      }`}
-                    >
-                      {isPast ? <Check className="w-5 h-5 stroke-[2.5]" /> : <Icon className="w-5 h-5" />}
-                    </button>
-                    <span className={`text-xs mt-2 font-medium ${isCurrent ? "text-orange-600 font-semibold" : "text-gray-500"}`}>
-                      {s.name}
-                    </span>
-                  </div>
-                  {stepIdx !== STEPS.length - 1 && (
-                    <div className={`h-[2px] w-full max-w-[40px] -mt-5 transition-colors ${isPast ? "bg-green-500" : "bg-gray-200"}`} />
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        </nav>
-      </CardHeader>
-
-      <CardContent className="p-10">
-        {errorMsg && (
-          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-sm flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
-            <p>{errorMsg}</p>
-          </div>
         )}
+      </div>
 
-        {successMsg && (
-          <div className="mb-6 p-5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-sm flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Check className="w-5 h-5 text-emerald-600 shrink-0" />
-              <p className="font-medium">{successMsg}</p>
+      <Card className="w-full max-w-4xl mx-auto border-none bg-white rounded-3xl shadow-[0px_20px_60px_rgba(0,0,0,0.06)] overflow-hidden transition-all duration-300">
+        <CardHeader className="border-b border-gray-100 pb-8 px-10 pt-10 bg-gradient-to-r from-orange-50/50 via-white to-blue-50/30">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                  Catalog v3.1 Compliant
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                  Trilingual (en/ta/hi)
+                </span>
+                {isEdit && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                    Edit Mode
+                  </span>
+                )}
+              </div>
+              <CardTitle className="text-2xl font-bold text-gray-900">
+                {isEdit ? `Edit Scheme: ${formValues.title || schemeId}` : "Add New Scheme Draft"}
+              </CardTitle>
+              <p className="text-sm text-gray-500 mt-1">
+                {isEdit 
+                  ? "Modify scheme guidelines, eligibility rules, and localized content synchronized with the Flutter app."
+                  : "Draft official government schemes structured for the Flutter mobile discovery engine."}
+              </p>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                form.reset();
-                setStep(1);
-                setSuccessMsg("");
-              }}
-              className="rounded-xl border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-            >
-              Draft Another Scheme
-            </Button>
+            <span className="text-sm font-semibold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-xl border border-orange-200">
+              Step {step} of 5
+            </span>
           </div>
-        )}
+
+          {/* Progress Tracker */}
+          <nav aria-label="Progress">
+            <ol role="list" className="flex items-center justify-between w-full">
+              {STEPS.map((s, stepIdx) => {
+                const Icon = s.icon;
+                const isPast = s.id < step;
+                const isCurrent = s.id === step;
+                return (
+                  <li key={s.name} className="flex-1 flex items-center">
+                    <div className="flex flex-col items-center flex-1">
+                      <button
+                        type="button"
+                        onClick={() => s.id < step && setStep(s.id)}
+                        disabled={s.id > step}
+                        className={`h-10 w-10 rounded-2xl flex items-center justify-center transition-all duration-200 ${
+                          isPast
+                            ? "bg-green-500 text-white shadow-md shadow-green-500/20"
+                            : isCurrent
+                            ? "border-2 border-orange-500 bg-orange-500 text-white shadow-lg shadow-orange-500/30"
+                            : "border border-gray-200 bg-white text-gray-400"
+                        }`}
+                      >
+                        {isPast ? <Check className="w-5 h-5 stroke-[2.5]" /> : <Icon className="w-5 h-5" />}
+                      </button>
+                      <span className={`text-xs mt-2 font-medium ${isCurrent ? "text-orange-600 font-semibold" : "text-gray-500"}`}>
+                        {s.name}
+                      </span>
+                    </div>
+                    {stepIdx !== STEPS.length - 1 && (
+                      <div className={`h-[2px] w-full max-w-[40px] -mt-5 transition-colors ${isPast ? "bg-green-500" : "bg-gray-200"}`} />
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+        </CardHeader>
+
+        <CardContent className="p-10">
+          {errorMsg && (
+            <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-sm flex items-center gap-3">
+              <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+              <p>{errorMsg}</p>
+            </div>
+          )}
+
+          {successMsg && (
+            <div className="mb-6 p-5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Check className="w-5 h-5 text-emerald-600 shrink-0" />
+                <p className="font-medium">{successMsg}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link href="/schemes">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                  >
+                    View in Schemes Table
+                  </Button>
+                </Link>
+                {!isEdit && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      form.reset();
+                      setStep(1);
+                      setSuccessMsg("");
+                    }}
+                    className="rounded-xl border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                  >
+                    Draft Another Scheme
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* STEP 1: General Info & Governance */}
@@ -284,12 +486,24 @@ export function SchemeWizard() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="code" className="text-gray-700 font-semibold">
-                    Scheme Code <span className="text-rose-500">*</span>
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="code" className="text-gray-700 font-semibold">
+                      Scheme Code <span className="text-rose-500">*</span>
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newCode = generateStateSchemeCode(formValues.isCentral ? "All India" : formValues.targetState);
+                        setValue("code", newCode, { shouldValidate: true, shouldDirty: true });
+                      }}
+                      className="text-xs text-orange-600 hover:text-orange-700 font-medium inline-flex items-center gap-1 hover:underline cursor-pointer"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Auto-Generate
+                    </button>
+                  </div>
                   <Input
                     id="code"
-                    placeholder="e.g. MSME2526-099"
+                    placeholder="e.g. MH-MSME2526-099"
                     className="h-11 rounded-xl bg-gray-50/70 border-gray-200 uppercase font-mono text-sm"
                     {...register("code")}
                   />
@@ -364,8 +578,9 @@ export function SchemeWizard() {
                   <input
                     type="checkbox"
                     id="isCentral"
-                    className="h-5 w-5 rounded-lg border-gray-300 text-orange-500 focus:ring-orange-400"
-                    {...register("isCentral")}
+                    checked={formValues.isCentral}
+                    onChange={(e) => handleCentralToggle(e.target.checked)}
+                    className="h-5 w-5 rounded-lg border-gray-300 text-orange-500 focus:ring-orange-400 cursor-pointer"
                   />
                   <div>
                     <Label htmlFor="isCentral" className="text-sm font-semibold text-gray-800 cursor-pointer">
@@ -382,8 +597,9 @@ export function SchemeWizard() {
                   <select
                     id="targetState"
                     disabled={formValues.isCentral}
+                    value={formValues.targetState}
+                    onChange={(e) => handleStateChange(e.target.value)}
                     className="w-full h-10 px-3 rounded-xl bg-white border border-gray-200 text-sm disabled:opacity-50"
-                    {...register("targetState")}
                   >
                     {STATES.map((st) => (
                       <option key={st} value={st}>
@@ -393,6 +609,60 @@ export function SchemeWizard() {
                   </select>
                 </div>
               </div>
+
+              {/* State Intelligence & Language Detection Card */}
+              <div className="p-4 rounded-2xl border border-orange-200/80 bg-gradient-to-r from-orange-50/80 via-amber-50/40 to-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-200 flex items-center justify-center text-orange-600 font-mono font-bold text-sm shrink-0">
+                    {currentStateConfig.codePrefix}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-sm font-bold text-gray-900">
+                        {formValues.isCentral ? "Pan-India Central Scheme" : `${formValues.targetState} State Scheme`}
+                      </h4>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 font-mono">
+                        Prefix: {currentStateConfig.codePrefix}-MSME...
+                      </span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                        {currentStateConfig.languageNative} ({currentStateConfig.languageName})
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">
+                      <span className="font-semibold text-gray-700">Nodal Dept:</span> {currentStateConfig.ministry}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleStateChange(formValues.isCentral ? "All India" : formValues.targetState, true)}
+                    className="rounded-xl border-orange-200 text-orange-700 hover:bg-orange-100/70 text-xs h-8 font-medium gap-1.5"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-orange-500" />
+                    Re-Apply State Defaults
+                  </Button>
+                </div>
+              </div>
+
+              {autoAssignmentBanner && (
+                <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs flex items-center justify-between gap-2 animate-in fade-in-50">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>{autoAssignmentBanner}</span>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setAutoAssignmentBanner(null)} 
+                    className="text-amber-700 hover:text-amber-900 font-bold px-1.5 py-0.5 rounded cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -652,6 +922,45 @@ export function SchemeWizard() {
           {/* STEP 4: Trilingual Localization (en, ta, hi) */}
           {step === 4 && (
             <div className="space-y-6 animate-in fade-in-50 duration-200">
+              {/* State Localization Target Callout Banner */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-white border border-blue-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-200 flex items-center justify-center text-blue-600 font-bold text-sm shrink-0">
+                    <Languages className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-sm font-bold text-gray-900">
+                        Target State Language: {currentStateConfig.languageName} ({currentStateConfig.languageNative})
+                      </h4>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200 font-mono">
+                        ISO: {currentStateConfig.languageCode}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {formValues.targetState === "Maharashtra" ? (
+                        <>Detected <strong className="text-gray-900">Marathi (मराठी)</strong> for Maharashtra. Fully compatible with Devanagari script fields in the Hindi tab below, or you can tailor localized terms.</>
+                      ) : formValues.targetState === "Tamil Nadu" ? (
+                        <>Detected <strong className="text-gray-900">Tamil (தமிழ்)</strong> as primary regional language. Utilize the Tamil tab below for localized app cards.</>
+                      ) : (
+                        <>Detected <strong className="text-gray-900">{currentStateConfig.languageName}</strong> for {formValues.targetState}. Beneficiaries in this state will receive regional voice prompts and translated listings.</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreFillLocalizationTemplates}
+                  className="rounded-xl border-blue-200 text-blue-700 hover:bg-blue-100/70 text-xs h-8 font-medium gap-1.5 shrink-0 self-end sm:self-center"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                  Pre-fill State Templates
+                </Button>
+              </div>
+
               <div className="flex border-b border-gray-200 gap-2">
                 <button
                   type="button"
@@ -930,10 +1239,10 @@ export function SchemeWizard() {
                 className="rounded-xl bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/25 h-11 px-8 font-semibold flex items-center gap-2"
               >
                 {isSubmitting ? (
-                  <>Saving to Supabase...</>
+                  <>{isEdit ? "Updating Scheme..." : "Saving to Supabase..."}</>
                 ) : (
                   <>
-                    <Check className="w-4 h-4 stroke-[3]" /> Submit Scheme Draft
+                    <Check className="w-4 h-4 stroke-[3]" /> {isEdit ? "Save Changes & Update Scheme" : "Submit Scheme Draft"}
                   </>
                 )}
               </Button>
@@ -942,5 +1251,6 @@ export function SchemeWizard() {
         </form>
       </CardContent>
     </Card>
+    </div>
   );
 }

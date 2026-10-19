@@ -2,7 +2,17 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { SchemeFormValues, schemeFormSchema } from "@/lib/schema/scheme";
+import { 
+  SchemeFormValues, 
+  schemeFormSchema, 
+  mapDbSchemeToFormValues,
+  STATES, 
+  SCHEME_CATEGORIES, 
+  ENTERPRISE_SCALES, 
+  DEMOGRAPHIC_TAGS, 
+  BENEFIT_TYPES, 
+  APPLICATION_MODES 
+} from "@/lib/schema/scheme";
 import { revalidatePath } from "next/cache";
 import crypto from "crypto";
 
@@ -10,45 +20,44 @@ function computeSha256(content: string): string {
   return crypto.createHash("sha256").update(content, "utf8").digest("hex");
 }
 
-export async function submitSchemeDraft(data: SchemeFormValues) {
-  const supabase = await createClient();
-
-  // Validate form data against schema
-  const result = schemeFormSchema.safeParse(data);
-  if (!result.success) {
-    const errorMessages = result.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
-    return { error: `Validation failed: ${errorMessages}` };
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("Missing Supabase admin configuration");
   }
+  return createSupabaseClient(url, key);
+}
 
-  const validated = result.data;
-  const { data: { user } } = await supabase.auth.getUser();
-  const userId = user?.id || null;
+/**
+ * Builds canonical Catalog v3.1 record JSON complying strictly with reference skeleton (SCH000124)
+ */
+function buildCatalogRecordJson(
+  entityId: string, 
+  validated: SchemeFormValues, 
+  existingRecord?: any
+) {
+  const existingIdentity = existingRecord?.identity || {};
+  const existingContent = existingRecord?.content || {};
+  const existingClassification = existingContent?.classification || {};
 
-  // Admin client bypasses RLS using service_role key
-  const supabaseAdmin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  // Generate canonical entity ID
-  const entityId = `SCH${Date.now().toString().slice(-6)}`;
-
-  // Create record JSON adhering strictly to Catalog v3.1 reference skeleton (SCH000124)
-  const recordJson = {
+  return {
     identity: {
+      ...existingIdentity,
       id: entityId,
       entityType: "scheme",
       code: validated.code,
-      legacyCodes: [],
+      legacyCodes: existingIdentity.legacyCodes || [],
       name: validated.title,
       shortName: validated.code,
-      acronym: null,
+      acronym: existingIdentity.acronym || null,
       slug: validated.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
       language: "en",
-      status: "active",
+      status: existingIdentity.status || "active",
       updated_at: new Date().toISOString(),
     },
     content: {
+      ...existingContent,
       classification: {
         government: {
           level: validated.isCentral ? "central" : "state",
@@ -62,9 +71,9 @@ export async function submitSchemeDraft(data: SchemeFormValues) {
         },
         schemeType: validated.category.toLowerCase().replace(/[^a-z0-9]/g, "_"),
         schemeTypeText: validated.category,
-        sectors: [],
+        sectors: existingClassification.sectors || [],
         sectorsText: validated.category,
-        categories: [],
+        categories: existingClassification.categories || [],
         tags: validated.demographicTags,
       },
       overview: {
@@ -74,7 +83,6 @@ export async function submitSchemeDraft(data: SchemeFormValues) {
         version: "Catalog v3.1",
         lastUpdatedText: "Current",
       },
-      // Catalog v3.1 Contract: objectives MUST be an array of strings
       objectives: [validated.objectivesEn || validated.title],
       targetBeneficiaries: {
         description: `Targeting ${validated.enterpriseScales.join(", ")} enterprises: ${
@@ -141,7 +149,6 @@ export async function submitSchemeDraft(data: SchemeFormValues) {
       resources: {
         officialWebsiteUrl: validated.schemeUrl || null,
       },
-      // Trilingual Localization: en, ta, hi
       localization: {
         en: {
           name: validated.title,
@@ -164,7 +171,27 @@ export async function submitSchemeDraft(data: SchemeFormValues) {
       },
     },
   };
+}
 
+/**
+ * Submits a new scheme draft into catalog.scheme and catalog.content
+ */
+export async function submitSchemeDraft(data: SchemeFormValues) {
+  const supabase = await createClient();
+
+  const result = schemeFormSchema.safeParse(data);
+  if (!result.success) {
+    const errorMessages = result.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
+    return { error: `Validation failed: ${errorMessages}` };
+  }
+
+  const validated = result.data;
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id || null;
+
+  const supabaseAdmin = getAdminClient();
+  const entityId = `SCH${Date.now().toString().slice(-6)}`;
+  const recordJson = buildCatalogRecordJson(entityId, validated);
   const recordJsonString = JSON.stringify(recordJson);
   const recordChecksum = `sha256:${computeSha256(recordJsonString)}`;
 
@@ -205,6 +232,7 @@ export async function submitSchemeDraft(data: SchemeFormValues) {
         primary_authority_id: validated.sponsoringAuthority,
         minimum_funding_amount: validated.benefitAmountMin || null,
         maximum_funding_amount: validated.benefitAmountMax || null,
+        scheme_url: validated.schemeUrl || null,
         is_active: true,
       });
 
@@ -214,7 +242,7 @@ export async function submitSchemeDraft(data: SchemeFormValues) {
     }
   }
 
-  // 3. Populate trilingual content in catalog.content if table is accessible
+  // 3. Populate trilingual content in catalog.content
   try {
     const contentRows = [
       {
@@ -281,4 +309,297 @@ export async function submitSchemeDraft(data: SchemeFormValues) {
   revalidatePath("/");
 
   return { success: true, entityId, code: validated.code };
+}
+
+/**
+ * Updates an existing scheme in catalog.scheme and catalog.content
+ */
+export async function updateScheme(id: string, data: SchemeFormValues) {
+  const supabase = await createClient();
+
+  const result = schemeFormSchema.safeParse(data);
+  if (!result.success) {
+    const errorMessages = result.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
+    return { error: `Validation failed: ${errorMessages}` };
+  }
+
+  const validated = result.data;
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id || null;
+
+  const supabaseAdmin = getAdminClient();
+
+  // Fetch existing scheme record to preserve legacy identifiers and system metadata
+  const { data: existingScheme, error: fetchErr } = await supabaseAdmin
+    .schema("catalog")
+    .from("scheme")
+    .select("record_json, status, is_active")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (fetchErr || !existingScheme) {
+    return { error: `Scheme ${id} not found in catalog: ${fetchErr?.message || "Not found"}` };
+  }
+
+  const recordJson = buildCatalogRecordJson(id, validated, existingScheme.record_json);
+  const recordJsonString = JSON.stringify(recordJson);
+  const recordChecksum = `sha256:${computeSha256(recordJsonString)}`;
+
+  // Update catalog.scheme row
+  const { error: updateError } = await supabaseAdmin
+    .schema("catalog")
+    .from("scheme")
+    .update({
+      checksum: recordChecksum,
+      record_json: recordJson,
+      scheme_code: validated.code,
+      name_en: validated.title,
+      name_ta: validated.titleTa || null,
+      government_level: validated.isCentral ? "central" : "state",
+      scheme_type: validated.category,
+      state: validated.targetState,
+      ministry: validated.ministry,
+      department: validated.sponsoringAuthority,
+      search_keywords: `${validated.title} ${validated.category} ${validated.enterpriseScales.join(" ")}`,
+      primary_authority_id: validated.sponsoringAuthority,
+      minimum_funding_amount: validated.benefitAmountMin || null,
+      maximum_funding_amount: validated.benefitAmountMax || null,
+      scheme_url: validated.schemeUrl || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (updateError) {
+    console.error("Direct catalog.scheme update error:", updateError);
+    return { error: `Failed to update scheme: ${updateError.message}` };
+  }
+
+  // Update localized content in catalog.content
+  try {
+    const contentRows = [
+      {
+        entity_type: "scheme",
+        entity_id: id,
+        lang: "en",
+        name: validated.title,
+        summary: validated.summaryEn || validated.title,
+        description: validated.descriptionEn || validated.summaryEn || validated.title,
+        benefits_text: validated.benefitsSummary || `${validated.benefitType} financial assistance`,
+        origin: "human",
+        verified: true,
+      },
+      {
+        entity_type: "scheme",
+        entity_id: id,
+        lang: "ta",
+        name: validated.titleTa || validated.title,
+        summary: validated.summaryTa || validated.summaryEn || validated.title,
+        description: validated.descriptionTa || validated.descriptionEn || validated.title,
+        benefits_text: validated.benefitsTa || validated.benefitsSummary || `${validated.benefitType} நிதி உதவி`,
+        origin: "human",
+        verified: !!validated.titleTa,
+      },
+      {
+        entity_type: "scheme",
+        entity_id: id,
+        lang: "hi",
+        name: validated.titleHi || validated.title,
+        summary: validated.summaryHi || validated.summaryEn || validated.title,
+        description: validated.descriptionHi || validated.descriptionEn || validated.title,
+        benefits_text: validated.benefitsHi || validated.benefitsSummary || `${validated.benefitType} वित्तीय सहायता`,
+        origin: "human",
+        verified: !!validated.titleHi,
+      },
+    ];
+
+    await supabaseAdmin
+      .schema("catalog")
+      .from("content")
+      .upsert(contentRows, { onConflict: "entity_type,entity_id,lang" });
+  } catch (contentErr) {
+    console.warn("Could not upsert to catalog.content (non-fatal):", contentErr);
+  }
+
+  // Log admin audit action
+  try {
+    await supabaseAdmin
+      .schema("admin")
+      .from("catalog_change_log")
+      .insert({
+        entity: "scheme",
+        entity_id: id,
+        field_path: "record_json",
+        new_value: recordJson,
+        reason: `Admin updated scheme "${validated.title}" (${validated.code}) via Admin Panel`,
+        changed_by: userId,
+      });
+  } catch (logErr) {
+    console.warn("Could not log to admin.catalog_change_log:", logErr);
+  }
+
+  revalidatePath("/schemes");
+  revalidatePath(`/schemes/${id}`);
+  revalidatePath("/");
+
+  return { success: true, entityId: id, code: validated.code };
+}
+
+/**
+ * Toggles a scheme's status (e.g. PUBLISHED, DRAFT, DISABLED) and is_active flag
+ */
+export async function toggleSchemeStatus(id: string, newStatus: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id || null;
+
+  const supabaseAdmin = getAdminClient();
+  const isActive = newStatus !== "DISABLED";
+
+  const { data: existingScheme } = await supabaseAdmin
+    .schema("catalog")
+    .from("scheme")
+    .select("record_json")
+    .eq("id", id)
+    .maybeSingle();
+
+  const recordJson = existingScheme?.record_json || {};
+  if (recordJson.identity) {
+    recordJson.identity.status = isActive ? (newStatus === "PUBLISHED" ? "active" : "draft") : "inactive";
+    recordJson.identity.updated_at = new Date().toISOString();
+  }
+
+  const { error } = await supabaseAdmin
+    .schema("catalog")
+    .from("scheme")
+    .update({
+      status: newStatus,
+      is_active: isActive,
+      record_json: recordJson,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("toggleSchemeStatus error:", error);
+    return { success: false, error: error.message };
+  }
+
+  try {
+    await supabaseAdmin
+      .schema("admin")
+      .from("catalog_change_log")
+      .insert({
+        entity: "scheme",
+        entity_id: id,
+        field_path: "status",
+        new_value: { status: newStatus, is_active: isActive },
+        reason: `Admin updated status to "${newStatus}" via Admin Panel`,
+        changed_by: userId,
+      });
+  } catch (logErr) {
+    console.warn("Could not log to admin.catalog_change_log:", logErr);
+  }
+
+  revalidatePath("/schemes");
+  revalidatePath(`/schemes/${id}`);
+  revalidatePath("/");
+
+  return { success: true, id, status: newStatus, is_active: isActive };
+}
+
+/**
+ * Deletes a scheme and its localized content from the catalog
+ */
+export async function deleteScheme(id: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id || null;
+
+  const supabaseAdmin = getAdminClient();
+
+  // Retrieve scheme info for audit logging
+  const { data: existing } = await supabaseAdmin
+    .schema("catalog")
+    .from("scheme")
+    .select("scheme_code, name_en")
+    .eq("id", id)
+    .maybeSingle();
+
+  // Delete localized content from catalog.content
+  try {
+    await supabaseAdmin
+      .schema("catalog")
+      .from("content")
+      .delete()
+      .eq("entity_id", id);
+  } catch (contentErr) {
+    console.warn("Could not delete from catalog.content (non-fatal):", contentErr);
+  }
+
+  // Delete from catalog.scheme
+  const { error } = await supabaseAdmin
+    .schema("catalog")
+    .from("scheme")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("deleteScheme error:", error);
+    return { success: false, error: error.message };
+  }
+
+  try {
+    await supabaseAdmin
+      .schema("admin")
+      .from("catalog_change_log")
+      .insert({
+        entity: "scheme",
+        entity_id: id,
+        field_path: "id",
+        new_value: null,
+        reason: `Admin deleted scheme "${existing?.name_en || id}" (${existing?.scheme_code || id}) via Admin Panel`,
+        changed_by: userId,
+      });
+  } catch (logErr) {
+    console.warn("Could not log to admin.catalog_change_log:", logErr);
+  }
+
+  revalidatePath("/schemes");
+  revalidatePath("/");
+
+  return { success: true, id };
+}
+
+/**
+ * Fetches a single scheme by ID using mss_scheme_detail RPC and parses it into SchemeFormValues
+ */
+export async function fetchSchemeById(id: string): Promise<{
+  data?: SchemeFormValues;
+  raw?: any;
+  error?: string;
+}> {
+  try {
+    const supabaseAdmin = getAdminClient();
+
+    const { data: detailData, error: detailError } = await supabaseAdmin.rpc("mss_scheme_detail", {
+      p_scheme_id: id,
+    });
+
+    if (detailError || !detailData || !detailData.scheme) {
+      return { error: detailError?.message || `Scheme with ID "${id}" was not found in catalog` };
+    }
+
+    const schemeObj = detailData.scheme;
+    const formValues = mapDbSchemeToFormValues({
+      id,
+      name_en: schemeObj.identity?.name,
+      scheme_code: schemeObj.identity?.code || id,
+      state: schemeObj.content?.classification?.government?.states?.[0] || "All India",
+      record_json: schemeObj,
+    });
+
+    return { data: formValues, raw: schemeObj };
+  } catch (err: any) {
+    return { error: err.message || "Failed to fetch scheme from catalog" };
+  }
 }

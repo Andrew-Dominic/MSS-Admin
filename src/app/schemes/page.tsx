@@ -15,40 +15,27 @@ export default async function SchemesPage() {
   let schemeList: SchemeRow[] = [];
 
   try {
-    const { data: searchData, error } = await supabaseAdmin.rpc('mss_search_data');
+    const { data: searchData, error } = await supabaseAdmin.rpc("mss_search_data");
     if (!error && Array.isArray(searchData) && searchData.length > 0) {
       schemeList = searchData.map((item: any) => {
         const profile = item.search_record?.schemeSearchProfile || {};
-        const statusRaw = (item.scheme_record?.identity?.status || 'active').toUpperCase();
-        const status = statusRaw === 'ACTIVE' ? 'PUBLISHED' : statusRaw;
-        
+        const statusRaw = (item.scheme_record?.identity?.status || "active").toUpperCase();
+        let status = statusRaw;
+        if (statusRaw === "ACTIVE") status = "PUBLISHED";
+        else if (statusRaw === "INACTIVE") status = "DISABLED";
+
         return {
           id: item.scheme_id,
-          scheme_code: item.scheme_id,
+          scheme_code: profile.schemeId || item.scheme_id,
           name_en: item.name_en || profile.name || item.scheme_id,
-          state: profile.districts?.[0] || 'All India',
-          scheme_type: profile.sector || 'General',
+          state: profile.districts?.[0] || "All India",
+          scheme_type: profile.sector || "General",
           status,
+          is_active: status !== "DISABLED",
         };
       });
-    } else {
-      // Direct query fallback from catalog.scheme
-      const { data: dbSchemes, error: dbError } = await supabaseAdmin
-        .schema('catalog')
-        .from('scheme')
-        .select('id, scheme_code, name_en, state, scheme_type, status')
-        .order('id', { ascending: false });
-
-      if (!dbError && Array.isArray(dbSchemes)) {
-        schemeList = dbSchemes.map((s: any) => ({
-          id: s.id,
-          scheme_code: s.scheme_code || s.id,
-          name_en: s.name_en,
-          state: s.state || 'All India',
-          scheme_type: s.scheme_type || 'General',
-          status: s.status || 'DRAFT',
-        }));
-      }
+    } else if (error) {
+      console.warn("mss_search_data RPC error:", error.message);
     }
   } catch (err) {
     console.error("SchemesPage fetch error:", err);
@@ -59,7 +46,7 @@ export default async function SchemesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-1">Schemes</h1>
-          <p className="text-gray-500">Manage, edit, and publish government schemes in the catalog.</p>
+          <p className="text-gray-500">Manage, edit, disable, and publish government schemes in the catalog.</p>
         </div>
         <div className="flex gap-4">
           <Link href="/schemes/new">

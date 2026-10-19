@@ -67,7 +67,8 @@ The Dashboard is the operational landing page giving administrators an instant p
 A high-performance interactive table for searching, inspecting, and filtering government schemes:
 
 ### Key Features:
-- **Fast Client-Side Search**: Search across scheme names, official scheme codes (e.g. `MSME2526-099`), and target states.
+### Key Features:
+- **Fast Client-Side Search**: Search across scheme names, official scheme codes (e.g. `MSME2526-099`, `MH-MSME2526-104`), and target states.
 - **Category Filter**: Filter schemes by the 8 canonical MSME categories matching the Flutter app's `kSchemeTypeGroups`:
   - *Loans & Credit*
   - *Subsidies & Incentives*
@@ -77,23 +78,27 @@ A high-performance interactive table for searching, inspecting, and filtering go
   - *Market Linkage & Export*
   - *Infrastructure & Technology*
   - *Special Welfare & Assistance*
-- **Status Badges**: Visual indicators (`PUBLISHED` in emerald, `DRAFT` in amber) indicating publishing state.
+- **Status Filter & Control**: Filter schemes by status (`ALL`, `PUBLISHED`, `DRAFT`, `DISABLED`).
+- **One-Click Disable / Enable Action**: Instant toggle button to deactivate (`DISABLED`) or activate (`PUBLISHED`) schemes with live optimistic state updates.
+- **Edit Scheme (`/schemes/[id]`)**: Full pre-populated 5-step wizard to modify live schemes, update financial subsidies, eligibility criteria, and localized texts.
+- **Delete Scheme Confirmation Modal**: Safe deletion with associated audit logging.
+- **Status Badges**: Visual indicators (`PUBLISHED` in emerald, `DRAFT` in amber, `DISABLED` in slate).
 - **Pagination & Counter**: Clean navigation across large scheme registries with configurable page sizes.
 - **Dual Data Retrieval**: Queries `mss_search_data` RPC with automated fallback to `catalog.scheme` to ensure zero blank-screen failures.
 
 ---
 
-## 4. Catalog v3.1 Scheme Drafting Wizard (`/schemes/new`)
+## 4. Catalog v3.1 Scheme Drafting Wizard (`/schemes/new` & `/schemes/[id]`)
 
-A guided, 5-step form to author new government schemes that integrate seamlessly with the Flutter mobile app's recommendation engine:
+A guided, 5-step form to author and edit government schemes that integrate seamlessly with the Flutter mobile app's recommendation engine:
 
 ### Step Breakdown:
 1. **Step 1: General Info & Governance**:
-   - Scheme Title & Code (e.g., `MSME2526-101`).
-   - Category selector aligning with mobile filter chips.
-   - Central (Pan-India) vs. State-specific scope toggle with state dropdown.
-   - Nodal Ministry, Sponsoring Authority (e.g., KVIC, DC-MSME), and Implementing Agency.
-   - Official Application URL and Mode (Online Portal, Physical Office, Hybrid).
+   - **Maharashtra & State Auto-Assignment**:
+     - Selecting **Maharashtra** (or any state) automatically generates official state-prefixed codes (e.g. `MH-MSME2526-XXX`), pre-fills the state nodal ministry (*Department of Industries, Government of Maharashtra*), sponsoring authority (*DI-MAHA*), implementing agency (*DIC Maharashtra / MSSIDC*), official portal (*https://industry.maharashtra.gov.in*), and sample title.
+     - Central Scheme toggle: switching off pan-India automatically defaults to Maharashtra and triggers state auto-assignment.
+     - **State Intelligence Badge**: Visual card displaying the state code prefix pill (`MH`), detected language (`मराठी - Marathi (mr)`), and a one-click *Re-Apply State Defaults* button.
+     - **Scheme Code Auto-Generator**: Generates financial year MSME-compliant codes with 1 click (`RefreshCw`).
 2. **Step 2: MSME Eligibility Rules**:
    - **Enterprise Scale Selector**: Target `Micro`, `Small`, and/or `Medium` enterprises with investment/turnover helper benchmarks.
    - **Target Demographics**: Multi-select tags (`Women`, `SC`, `ST`, `Differently-abled`, `Minority`, `Transgender`, `Ex-servicemen`, `General`).
@@ -103,7 +108,9 @@ A guided, 5-step form to author new government schemes that integrate seamlessly
    - Minimum and Maximum funding ceilings.
    - Subsidy Percentage (e.g., 15% – 35%).
    - Clear benefits narrative displayed on mobile scheme detail cards.
-4. **Step 4: Trilingual Localization (English, தமிழ், हिन्दी)**:
+4. **Step 4: Trilingual Localization (English, தமிழ், हिन्दी / मराठी)**:
+   - **State Target Language Banner**: Highlights the detected regional language for the state (e.g. Marathi `mr` for Maharashtra, Tamil `ta` for Tamil Nadu) with Devanagari script parity notices.
+   - **Pre-fill State Templates**: 1-click button to auto-fill localized regional titles, summaries, and benefits text for Maharashtra, Tamil Nadu, and regional states.
    - Dedicated tabbed editor supporting **English**, **Tamil (`ta`)**, and **Hindi (`hi`)**.
    - Input localized Scheme Name, Summary, Detailed Description, and Benefits text.
    - Automatically populates `content.localization` and `catalog.content` rows.
