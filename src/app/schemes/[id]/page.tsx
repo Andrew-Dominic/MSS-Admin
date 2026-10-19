@@ -46,7 +46,7 @@ export default async function EditSchemePage({ params }: EditSchemePageProps) {
   }
 
   return (
-    <div className="max-w-6xl mx-auto pb-12">
+    <div className="w-full max-w-7xl mx-auto pb-12">
       <SchemeWizard 
         initialData={initialData} 
         schemeId={id} 

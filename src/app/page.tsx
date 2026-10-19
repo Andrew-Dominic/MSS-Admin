@@ -81,7 +81,7 @@ export default async function DashboardPage() {
   const schemeList = recentSchemes;
   
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="w-full max-w-7xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-1">Dashboard</h1>
@@ -89,7 +89,7 @@ export default async function DashboardPage() {
         </div>
         <div className="flex gap-4">
           <Link href="/schemes/new">
-            <Button className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 h-11 px-6">
+            <Button className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 h-11 px-6 font-medium">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
               Add New Scheme
             </Button>
@@ -157,8 +157,12 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="col-span-2 border-none shadow-[0px_10px_40px_rgba(0,0,0,0.04)] bg-white rounded-3xl overflow-hidden">
-          <CardHeader className="border-b border-gray-100 pb-4 mb-4 px-6 pt-6">
+          <CardHeader className="border-b border-gray-100 pb-4 mb-4 px-6 pt-6 flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-bold text-gray-900">Recent Schemes</CardTitle>
+            <Link href="/schemes" className="text-xs font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-1">
+              View all schemes
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </Link>
           </CardHeader>
           <CardContent className="px-0 pb-0">
             <div className="overflow-x-auto">
@@ -169,12 +173,18 @@ export default async function DashboardPage() {
                     <th className="px-6 py-3 font-medium">Category</th>
                     <th className="px-6 py-3 font-medium">Status</th>
                     <th className="px-6 py-3 font-medium">Date</th>
+                    <th className="px-6 py-3 font-medium text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {schemeList.map((scheme: any) => (
-                    <tr key={scheme.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-gray-900">{scheme.name_en}</td>
+                    <tr key={scheme.id} className="hover:bg-orange-50/20 transition-colors group">
+                      <td className="px-6 py-4">
+                        <Link href={`/schemes/${scheme.id}`} className="block group-hover:text-orange-600 transition-colors">
+                          <div className="font-semibold text-gray-900 group-hover:text-orange-600 line-clamp-1">{scheme.name_en}</div>
+                          <div className="text-xs text-gray-400 font-mono mt-0.5">{scheme.scheme_code}</div>
+                        </Link>
+                      </td>
                       <td className="px-6 py-4 text-gray-500">{scheme.scheme_type || 'N/A'}</td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -186,11 +196,18 @@ export default async function DashboardPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-gray-500">{new Date(scheme.updated_at).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 text-right">
+                        <Link href={`/schemes/${scheme.id}`}>
+                          <Button size="sm" className="h-8 px-3 rounded-lg bg-orange-50 hover:bg-orange-500 text-orange-700 hover:text-white border border-orange-200 text-xs font-semibold shadow-none transition-all">
+                            Edit →
+                          </Button>
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                   {schemeList.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                         No schemes found.
                       </td>
                     </tr>

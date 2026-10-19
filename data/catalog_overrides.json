@@ -76,5 +76,187 @@
     },
     "updated_at": "2026-10-19T07:13:19.873Z",
     "isDeleted": true
+  },
+  "036e2e62-af50-482f-9404-f728f29a617c": {
+    "id": "036e2e62-af50-482f-9404-f728f29a617c",
+    "scheme_code": "036e2e62-af50-482f-9404-f728f29a617c",
+    "name_en": "Test Fresh Scheme",
+    "state": "All India",
+    "scheme_type": "Subsidies & Incentives",
+    "status": "PUBLISHED",
+    "is_active": true,
+    "record_json": {
+      "identity": {
+        "id": "036e2e62-af50-482f-9404-f728f29a617c",
+        "entityType": "scheme",
+        "code": "036e2e62-af50-482f-9404-f728f29a617c",
+        "legacyCodes": [],
+        "name": "Test Fresh Scheme",
+        "shortName": "036e2e62-af50-482f-9404-f728f29a617c",
+        "acronym": null,
+        "slug": "test-fresh-scheme",
+        "language": "en",
+        "status": "active",
+        "updated_at": "2026-10-19T07:21:57.586Z"
+      },
+      "content": {
+        "classification": {
+          "government": {
+            "level": "central",
+            "levelText": "Central",
+            "country": "IN",
+            "states": [],
+            "statesText": "Pan-India",
+            "ministryText": "Ministry of Micro, Small & Medium Enterprises",
+            "departmentText": "Ministry of MSME",
+            "implementingAgencyText": "Ministry of MSME"
+          },
+          "schemeType": "subsidies___incentives",
+          "schemeTypeText": "Subsidies & Incentives",
+          "sectors": [],
+          "sectorsText": "Subsidies & Incentives",
+          "categories": [],
+          "tags": [
+            "General / All"
+          ]
+        },
+        "overview": {
+          "summary": "Test Fresh Scheme",
+          "description": "Test Fresh Scheme",
+          "objective": "Test Fresh Scheme",
+          "version": "Catalog v3.1",
+          "lastUpdatedText": "Current"
+        },
+        "objectives": [
+          "Test Fresh Scheme"
+        ],
+        "targetBeneficiaries": {
+          "description": "Targeting Micro, Small, Medium enterprises: General / All",
+          "beneficiaryTypes": [],
+          "enterpriseTypes": [
+            "micro",
+            "small",
+            "medium"
+          ],
+          "businessStages": [],
+          "specialCategories": [
+            "General / All"
+          ]
+        },
+        "eligibility": {
+          "structured": {
+            "age": {
+              "minYears": null,
+              "maxYears": null,
+              "text": null
+            },
+            "gender": {
+              "values": []
+            },
+            "enterprise": {
+              "applies": true,
+              "types": [
+                "micro",
+                "small",
+                "medium"
+              ]
+            },
+            "specialCategory": {
+              "values": [
+                "General / All"
+              ]
+            },
+            "turnover": {
+              "maxInr": null
+            },
+            "investment": {
+              "maxInr": null
+            }
+          },
+          "narrative": {
+            "criteria": "Eligible for Micro, Small, Medium MSMEs in All India."
+          }
+        },
+        "benefits": {
+          "summary": "Capital Subsidy financial assistance",
+          "benefitTypes": [
+            "Capital Subsidy"
+          ],
+          "capitalSubsidy": {
+            "minAmountInr": null,
+            "maxAmountInr": null,
+            "maxAmountText": null,
+            "subsidyPercentage": null,
+            "description": "Capital Subsidy up to ₹N/A"
+          }
+        },
+        "requiredDocuments": [
+          {
+            "documentId": "036e2e62-af50-482f-9404-f728f29a617c-DOC001",
+            "name": "Aadhaar Card of Promoters",
+            "mandatory": "required",
+            "mandatoryText": "Yes",
+            "description": "Required submission document: Aadhaar Card of Promoters"
+          },
+          {
+            "documentId": "036e2e62-af50-482f-9404-f728f29a617c-DOC002",
+            "name": "Udyam Registration Certificate",
+            "mandatory": "required",
+            "mandatoryText": "Yes",
+            "description": "Required submission document: Udyam Registration Certificate"
+          },
+          {
+            "documentId": "036e2e62-af50-482f-9404-f728f29a617c-DOC003",
+            "name": "Detailed Project Report (DPR)",
+            "mandatory": "required",
+            "mandatoryText": "Yes",
+            "description": "Required submission document: Detailed Project Report (DPR)"
+          },
+          {
+            "documentId": "036e2e62-af50-482f-9404-f728f29a617c-DOC004",
+            "name": "Bank Account Statement (6 Months)",
+            "mandatory": "required",
+            "mandatoryText": "Yes",
+            "description": "Required submission document: Bank Account Statement (6 Months)"
+          }
+        ],
+        "applicationProcess": {
+          "onlineUrl": null,
+          "modeText": "Online Portal"
+        },
+        "schemeUrl": null,
+        "resources": {
+          "officialWebsiteUrl": null
+        },
+        "localization": {
+          "en": {
+            "name": "Test Fresh Scheme",
+            "summary": "Test Fresh Scheme",
+            "description": "Test Fresh Scheme",
+            "benefitsText": "Capital Subsidy financial assistance"
+          },
+          "ta": {
+            "name": "Test Fresh Scheme",
+            "summary": "Test Fresh Scheme",
+            "description": "Test Fresh Scheme",
+            "benefitsText": "Capital Subsidy நிதி உதவி"
+          },
+          "hi": {
+            "name": "Test Fresh Scheme",
+            "summary": "Test Fresh Scheme",
+            "description": "Test Fresh Scheme",
+            "benefitsText": "Capital Subsidy वित्तीय सहायता"
+          }
+        }
+      }
+    },
+    "updated_at": "2026-10-19T07:21:57.891Z"
+  },
+  "32a84b33-dc30-4fad-81a2-f9254513224c": {
+    "id": "32a84b33-dc30-4fad-81a2-f9254513224c",
+    "status": "DISABLED",
+    "is_active": false,
+    "record_json": {},
+    "updated_at": "2026-10-19T07:42:34.836Z"
   }
 }

@@ -69,7 +69,7 @@ export default async function SchemesPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="w-full max-w-7xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-1">Schemes</h1>

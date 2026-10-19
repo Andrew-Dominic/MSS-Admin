@@ -16,7 +16,7 @@ export default async function NotificationsPage() {
   const promoAlerts = promoRes.data || [];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="w-full max-w-7xl mx-auto space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-1">
           Announcements & Mobile Alerts

@@ -306,11 +306,11 @@ export function SchemesTable({ initialSchemes }: SchemesTableProps) {
         <table className="w-full text-sm text-left">
           <thead className="text-xs text-gray-500 bg-gray-50/50 uppercase tracking-wider">
             <tr>
-              <th className="px-6 py-4 font-semibold">Scheme Code & Name</th>
-              <th className="px-6 py-4 font-semibold">Target State</th>
-              <th className="px-6 py-4 font-semibold">Category</th>
-              <th className="px-6 py-4 font-semibold">Status Control</th>
-              <th className="px-6 py-4 font-semibold text-right">Actions</th>
+              <th className="px-5 py-3.5 font-semibold">Scheme Code & Name</th>
+              <th className="px-4 py-3.5 font-semibold">Target State</th>
+              <th className="px-4 py-3.5 font-semibold">Category</th>
+              <th className="px-4 py-3.5 font-semibold">Status Control</th>
+              <th className="px-5 py-3.5 font-semibold text-right min-w-[210px]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -321,35 +321,44 @@ export function SchemesTable({ initialSchemes }: SchemesTableProps) {
               const isDisabled = scheme.status === "DISABLED" || scheme.is_active === false;
 
               return (
-                <tr key={scheme.id} className="hover:bg-gray-50/60 transition-colors group">
-                  <td className="px-6 py-4 max-w-sm">
-                    <div className="font-semibold text-gray-900 line-clamp-1 group-hover:text-orange-600 transition-colors">
+                <tr key={scheme.id} className="hover:bg-gray-50/70 transition-colors group">
+                  <td className="px-5 py-3.5 max-w-md">
+                    <Link
+                      href={`/schemes/${scheme.id}`}
+                      className="font-bold text-gray-900 hover:text-orange-600 transition-colors line-clamp-2 block leading-snug cursor-pointer group-hover:underline"
+                    >
                       {scheme.name_en}
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200">
+                    </Link>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-xs text-gray-600 font-mono bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200 font-medium">
                         {scheme.scheme_code || scheme.id}
                       </span>
+                      <Link
+                        href={`/schemes/${scheme.id}`}
+                        className="text-xs font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        Edit details &rarr;
+                      </Link>
                     </div>
                   </td>
 
-                  <td className="px-6 py-4 text-gray-600 whitespace-nowrap">
+                  <td className="px-4 py-3.5 text-gray-600 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${
                       scheme.state === "All India" 
-                        ? "bg-blue-50 text-blue-700 border border-blue-200" 
+                         ? "bg-blue-50 text-blue-700 border border-blue-200" 
                         : "bg-purple-50 text-purple-700 border border-purple-200"
                     }`}>
                       {scheme.state || "All India"}
                     </span>
                   </td>
 
-                  <td className="px-6 py-4 text-gray-600 whitespace-nowrap">
+                  <td className="px-4 py-3.5 text-gray-600 whitespace-nowrap">
                     <span className="text-xs text-gray-700 font-medium bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-200">
                       {scheme.scheme_type || "General"}
                     </span>
                   </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3.5 whitespace-nowrap">
                     {/* Status Dropdown / Quick Switcher */}
                     <div className="flex items-center gap-2">
                       <select
@@ -375,8 +384,31 @@ export function SchemesTable({ initialSchemes }: SchemesTableProps) {
                     </div>
                   </td>
 
-                  <td className="px-6 py-4 text-right whitespace-nowrap">
+                  <td className="px-5 py-3.5 text-right whitespace-nowrap min-w-[210px]">
                     <div className="flex items-center justify-end gap-1.5">
+                      {/* Prominent Edit Scheme Button */}
+                      <Link href={`/schemes/${scheme.id}`}>
+                        <Button
+                          size="sm"
+                          className="h-8 px-3 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm shadow-orange-500/20 transition-all cursor-pointer"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          Edit
+                        </Button>
+                      </Link>
+
+                      {/* Quick Edit Modal Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenQuickEdit(scheme)}
+                        title="Quick Edit Scheme Meta"
+                        className="h-8 px-2.5 rounded-lg border-gray-200 text-gray-700 hover:bg-gray-100 hover:text-gray-900 text-xs font-semibold flex items-center gap-1 transition-colors"
+                      >
+                        <SlidersHorizontal className="w-3.5 h-3.5 text-gray-500" />
+                        Quick
+                      </Button>
+
                       {/* Quick Enable/Disable toggle button */}
                       <Button
                         variant="ghost"
@@ -389,7 +421,7 @@ export function SchemesTable({ initialSchemes }: SchemesTableProps) {
                           )
                         }
                         title={isDisabled ? "Activate Scheme" : "Disable Scheme"}
-                        className={`h-9 w-9 p-0 rounded-xl transition-colors ${
+                        className={`h-8 w-8 p-0 rounded-lg transition-colors ${
                           isDisabled
                             ? "text-gray-400 hover:text-emerald-600 hover:bg-emerald-50"
                             : "text-gray-400 hover:text-amber-600 hover:bg-amber-50"
@@ -402,36 +434,13 @@ export function SchemesTable({ initialSchemes }: SchemesTableProps) {
                         )}
                       </Button>
 
-                      {/* Quick Edit Modal Button */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleOpenQuickEdit(scheme)}
-                        title="Quick Edit Scheme"
-                        className="h-9 w-9 p-0 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                      >
-                        <SlidersHorizontal className="w-4 h-4" />
-                      </Button>
-
-                      {/* Full Edit Scheme Button */}
-                      <Link href={`/schemes/${scheme.id}`}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          title="Full Scheme Editor (Rules & Translations)"
-                          className="h-9 w-9 p-0 rounded-xl text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                      </Link>
-
                       {/* Delete Scheme Button */}
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setSchemeToDelete(scheme)}
                         title="Delete Scheme from Catalog"
-                        className="h-9 w-9 p-0 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        className="h-8 w-8 p-0 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
