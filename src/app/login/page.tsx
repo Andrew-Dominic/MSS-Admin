@@ -34,6 +34,9 @@ export default async function LoginPage({
         
         <form action={login}>
           <input type="hidden" name="redirectTo" value={redirectTo} />
+          {/* Hidden submit button to guarantee Enter key triggers form submission in all browsers */}
+          <button type="submit" className="hidden" tabIndex={-1} aria-hidden="true" />
+          
           <CardContent className="space-y-6 px-10">
             {error && (
               <div className="rounded-xl bg-red-50 p-4 text-sm text-red-600 border border-red-100 text-center font-medium">
@@ -47,7 +50,7 @@ export default async function LoginPage({
                 id="email" 
                 name="email" 
                 type="email" 
-                placeholder="admin@example.com"
+                placeholder="admin@test.com"
                 required 
                 className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-orange-500 rounded-xl h-12 px-4 shadow-sm" 
               />
@@ -60,7 +63,7 @@ export default async function LoginPage({
               <Input 
                 id="password" 
                 name="password" 
-                type="password"
+                type="password" 
                 placeholder="••••••••" 
                 required 
                 className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-orange-500 rounded-xl h-12 px-4 shadow-sm" 
@@ -69,7 +72,10 @@ export default async function LoginPage({
           </CardContent>
           
           <CardFooter className="pt-4 pb-10 px-10">
-            <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold h-12 rounded-xl transition-all shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30">
+            <Button 
+              type="submit" 
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold h-12 rounded-xl transition-all shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30 cursor-pointer"
+            >
               Sign In
             </Button>
           </CardFooter>
