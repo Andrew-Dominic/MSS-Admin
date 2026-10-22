@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Self-contained server build (.next/standalone) so the VPS gets only
+  // compiled output, never the source or a node_modules install.
+  output: "standalone",
   devIndicators: false,
   poweredByHeader: false,
   experimental: {
