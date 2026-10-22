@@ -72,5 +72,9 @@ export const field =
 export function formatDate(iso?: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+  // Fixed zone: the server (UTC) and the browser must render the same text,
+  // or React reports a hydration mismatch and times disagree between pages.
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" });
 }
