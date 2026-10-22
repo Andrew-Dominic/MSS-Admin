@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, FileText, LayoutDashboard, LogOut, Menu, PlusCircle, Rocket, Upload, X, type LucideIcon } from "lucide-react";
+import { Activity, Bell, FileText, LayoutDashboard, LogOut, Menu, PlusCircle, Rocket, Upload, X, type LucideIcon } from "lucide-react";
 import { logout } from "@/app/login/actions";
 
 export interface AdminUser {
@@ -22,7 +22,10 @@ interface NavItem {
 const SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Overview",
-    items: [{ href: "/", label: "Dashboard", icon: LayoutDashboard, active: (p) => p === "/" }],
+    items: [
+      { href: "/", label: "Dashboard", icon: LayoutDashboard, active: (p) => p === "/" },
+      { href: "/status", label: "System", icon: Activity, active: (p) => p.startsWith("/status") },
+    ],
   },
   {
     title: "Catalogue",

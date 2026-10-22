@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { ArrowUpRight, Bell, CheckCircle2, Clock3, FileText, Layers, Rocket, Upload, XCircle } from "lucide-react";
+import { ArrowUpRight, Bell, CheckCircle2, Clock3, FileText, Layers, Rocket, Upload, Users, XCircle } from "lucide-react";
 import { describeError } from "@/lib/mss/api";
 import { MSS_API_BASE } from "@/lib/mss/config";
+import { catalogSummary } from "@/lib/mss/catalog";
 import { apiHealth, broadcastsSupported, latestRelease, listAllDrafts } from "@/lib/mss/schemes";
+import { agent } from "@/lib/status/checks";
 import { COLLECTIONS, collectionForId, draftName, type Draft } from "@/lib/mss/types";
 import { Notice, StatusBadge, btn, formatDate } from "@/components/admin/ui";
 import { Bars } from "@/components/dashboard/Bars";
@@ -44,7 +46,13 @@ function Card({ children, className = "", delay = 0 }: { children: React.ReactNo
 }
 
 export default async function DashboardPage() {
-  const [health, release, notifyOn] = await Promise.all([apiHealth(), latestRelease().catch(() => null), broadcastsSupported()]);
+  const [health, release, notifyOn, catalog, server] = await Promise.all([
+    apiHealth(),
+    latestRelease().catch(() => null),
+    broadcastsSupported(),
+    catalogSummary(),
+    agent(),
+  ]);
   let drafts: Draft[] = [];
   let error: string | null = null;
   try {
@@ -63,10 +71,19 @@ export default async function DashboardPage() {
   const week = activity.slice(-7);
   const apiUp = health?.status === "ok";
 
+  // Live app catalogue (all published schemes), falling back to the workflow count.
+  const liveSchemes = catalog?.schemes ?? published;
   const byCollection = COLLECTIONS.map((c) => ({
     ...c,
-    n: [...publishedIds].filter((id) => collectionForId(id) === c.value).length,
+    n: catalog ? catalog.byCollection[c.value] : [...publishedIds].filter((id) => collectionForId(id) === c.value).length,
   }));
+  const STATUS_TONE: Record<string, string> = {
+    active: "bg-emerald-100 text-emerald-800",
+    announced: "bg-blue-100 text-blue-800",
+    unknown: "bg-slate-200 text-slate-700",
+    closed: "bg-red-100 text-red-700",
+  };
+  const users = server.connected ? server.users : undefined;
   const maxCollection = Math.max(1, ...byCollection.map((c) => c.n));
 
   return (
@@ -95,9 +112,9 @@ export default async function DashboardPage() {
         <section className="mss-fade-up relative overflow-hidden rounded-3xl bg-[radial-gradient(120%_120%_at_0%_0%,#0b3a75_0%,var(--mss-navy)_55%,var(--mss-navy-deep)_100%)] p-5 text-white shadow-lg shadow-blue-950/20">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-medium text-blue-100/70">Published schemes</p>
-              <p className="mt-1 text-4xl font-semibold tracking-tight"><CountUp value={published} /></p>
-              <p className="mt-1 text-xs text-blue-100/60">via the review workflow</p>
+              <p className="text-xs font-medium text-blue-100/70">Schemes in the app</p>
+              <p className="mt-1 text-4xl font-semibold tracking-tight"><CountUp value={liveSchemes} /></p>
+              <p className="mt-1 text-xs text-blue-100/60">{catalog ? `live catalogue · ${catalog.release.release_version}` : "via the review workflow"}</p>
             </div>
             <div className="w-24 shrink-0">
               <Bars data={week} height={56} tone="dark" showLabels={false} />
@@ -106,22 +123,30 @@ export default async function DashboardPage() {
           <div aria-hidden className="mss-float pointer-events-none absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-blue-500/20 blur-2xl" />
         </section>
 
-        <Link href="/releases" className="mss-fade-up group rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-md" style={{ animationDelay: "60ms" }}>
+        <Link href="/status" className="mss-fade-up group rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-md" style={{ animationDelay: "60ms" }}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-slate-500">App users</p>
+            <Users className="h-4 w-4 text-blue-600" />
+          </div>
+          <p className="mt-1 text-4xl font-semibold tracking-tight text-slate-900">
+            {users?.total != null ? <CountUp value={users.total} /> : "—"}
+          </p>
+          <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
+            {users?.total != null ? `+${users.new_7d ?? 0} this week · ${users.active_sessions ?? "?"} signed in` : "connect the server agent"}
+            <ArrowUpRight className="h-3 w-3 opacity-0 transition group-hover:opacity-100" />
+          </p>
+        </Link>
+
+        <Link href="/releases" className="mss-fade-up group rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-md" style={{ animationDelay: "120ms" }}>
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-slate-500">Drafts to review</p>
             <Clock3 className="h-4 w-4 text-amber-500" />
           </div>
           <p className="mt-1 text-4xl font-semibold tracking-tight text-slate-900"><CountUp value={toReview} /></p>
-          <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">need approval <ArrowUpRight className="h-3 w-3 opacity-0 transition group-hover:opacity-100" /></p>
-        </Link>
-
-        <Link href="/releases" className="mss-fade-up group rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-md" style={{ animationDelay: "120ms" }}>
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-slate-500">Approved, not live</p>
-            <CheckCircle2 className="h-4 w-4 text-blue-600" />
-          </div>
-          <p className="mt-1 text-4xl font-semibold tracking-tight text-slate-900"><CountUp value={approved} /></p>
-          <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">ready to publish <ArrowUpRight className="h-3 w-3 opacity-0 transition group-hover:opacity-100" /></p>
+          <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
+            <CheckCircle2 className="h-3 w-3 text-blue-600" /> {approved} approved, ready to publish
+            <ArrowUpRight className="h-3 w-3 opacity-0 transition group-hover:opacity-100" />
+          </p>
         </Link>
 
         <Card delay={180}>
@@ -144,8 +169,8 @@ export default async function DashboardPage() {
         <Card delay={220}>
           <div className="mb-5 flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">Catalogue activity</h2>
-              <p className="text-xs text-slate-500">Drafts created or updated per day</p>
+              <h2 className="text-base font-semibold text-slate-900">Review activity</h2>
+              <p className="text-xs text-slate-500">Scheme drafts created or updated per day</p>
             </div>
             <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white">14 days</span>
           </div>
@@ -158,9 +183,20 @@ export default async function DashboardPage() {
             <h2 className="text-base font-semibold">By collection</h2>
           </div>
           <p className="mt-3 text-5xl font-semibold tracking-tight text-[var(--mss-navy)]">
-            <CountUp value={published} />
-            <span className="ml-2 text-base font-medium text-blue-700/70">live</span>
+            <CountUp value={liveSchemes} />
+            <span className="ml-2 text-base font-medium text-blue-700/70">schemes live</span>
           </p>
+          {catalog && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {Object.entries(catalog.byStatus)
+                .sort((a, b) => b[1] - a[1])
+                .map(([st, n]) => (
+                  <span key={st} className={`rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${STATUS_TONE[st] ?? STATUS_TONE.unknown}`}>
+                    {n} {st}
+                  </span>
+                ))}
+            </div>
+          )}
           <ul className="mt-5 space-y-4">
             {byCollection.map((c, i) => (
               <li key={c.value}>
