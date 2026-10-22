@@ -1,244 +1,113 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  FileText, 
-  PlusCircle, 
-  Bug, 
-  Bell, 
-  Settings,
-  ChevronRight,
-  LogOut
-} from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { Bell, FileText, LayoutDashboard, LogOut, PlusCircle, Rocket, Upload, type LucideIcon } from "lucide-react";
 import { logout } from "@/app/login/actions";
+
+export interface AdminUser {
+  name: string | null;
+  email: string | null;
+}
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  active: (path: string) => boolean;
+}
+
+const NAV: NavItem[] = [
+  { href: "/", label: "Overview", icon: LayoutDashboard, active: (p) => p === "/" },
+  {
+    href: "/schemes",
+    label: "Schemes",
+    icon: FileText,
+    active: (p) => p.startsWith("/schemes") && p !== "/schemes/new" && p !== "/schemes/upload",
+  },
+  { href: "/schemes/new", label: "New scheme", icon: PlusCircle, active: (p) => p === "/schemes/new" },
+  { href: "/schemes/upload", label: "Upload", icon: Upload, active: (p) => p === "/schemes/upload" },
+  { href: "/releases", label: "Releases", icon: Rocket, active: (p) => p.startsWith("/releases") },
+  { href: "/notifications", label: "Notifications", icon: Bell, active: (p) => p.startsWith("/notifications") },
+];
 
 export function SidebarNav() {
   const pathname = usePathname();
-
-  const isOverview = pathname === "/";
-  const isSchemes = pathname.startsWith("/schemes");
-  const isNewScheme = pathname === "/schemes/new";
-  const isTickets = pathname.startsWith("/tickets");
-  const isNotifications = pathname.startsWith("/notifications");
-  const isReleases = pathname.startsWith("/releases");
-
   return (
-    <aside className="hidden md:flex w-20 border-r border-gray-200 bg-white flex-col items-center py-6 gap-8 shrink-0 z-20">
-      <Link href="/" className="w-11 h-11 bg-orange-500 rounded-2xl flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-orange-500/25 hover:scale-105 transition-transform">
-        A
+    <aside className="z-20 hidden w-20 shrink-0 flex-col items-center gap-8 border-r border-gray-200 bg-white py-6 md:flex">
+      <Link href="/" aria-label="MSS Admin home" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-500 text-xl font-extrabold text-white shadow-lg shadow-orange-500/25 transition-transform hover:scale-105">
+        M
       </Link>
-
-      <nav className="flex flex-col gap-3">
-        <Link 
-          href="/" 
-          title="Dashboard Overview"
-          className={`p-3 rounded-2xl transition-all duration-200 ${
-            isOverview 
-              ? "bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105" 
-              : "text-gray-400 hover:bg-gray-100 hover:text-gray-900"
-          }`}
-        >
-          <LayoutDashboard className="w-5 h-5" />
-        </Link>
-
-        <Link 
-          href="/schemes" 
-          title="Schemes Catalog & Editor"
-          className={`p-3 rounded-2xl transition-all duration-200 ${
-            isSchemes && !isNewScheme
-              ? "bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105" 
-              : "text-gray-400 hover:bg-gray-100 hover:text-gray-900"
-          }`}
-        >
-          <FileText className="w-5 h-5" />
-        </Link>
-
-        <Link 
-          href="/schemes/new" 
-          title="Draft New Scheme"
-          className={`p-3 rounded-2xl transition-all duration-200 ${
-            isNewScheme 
-              ? "bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105" 
-              : "text-gray-400 hover:bg-gray-100 hover:text-gray-900"
-          }`}
-        >
-          <PlusCircle className="w-5 h-5" />
-        </Link>
-
-        <Link 
-          href="/tickets" 
-          title="Bug Reports & Support Tickets"
-          className={`p-3 rounded-2xl transition-all duration-200 ${
-            isTickets 
-              ? "bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105" 
-              : "text-gray-400 hover:bg-gray-100 hover:text-gray-900"
-          }`}
-        >
-          <Bug className="w-5 h-5" />
-        </Link>
-
-        <Link 
-          href="/notifications" 
-          title="Announcements & Mobile Alerts"
-          className={`p-3 rounded-2xl transition-all duration-200 ${
-            isNotifications 
-              ? "bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105" 
-              : "text-gray-400 hover:bg-gray-100 hover:text-gray-900"
-          }`}
-        >
-          <Bell className="w-5 h-5" />
-        </Link>
-
-        <Link 
-          href="/releases" 
-          title="Catalog Releases & OTA Sync"
-          className={`p-3 rounded-2xl transition-all duration-200 ${
-            isReleases 
-              ? "bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105" 
-              : "text-gray-400 hover:bg-gray-100 hover:text-gray-900"
-          }`}
-        >
-          <Settings className="w-5 h-5" />
-        </Link>
+      <nav className="flex flex-col gap-3" aria-label="Main">
+        {NAV.map(({ href, label, icon: Icon, active }) => {
+          const on = active(pathname);
+          return (
+            <Link
+              key={href}
+              href={href}
+              title={label}
+              aria-label={label}
+              aria-current={on ? "page" : undefined}
+              className={`rounded-2xl p-3 transition-all duration-200 ${on ? "scale-105 bg-orange-500 text-white shadow-md shadow-orange-500/30" : "text-gray-400 hover:bg-gray-100 hover:text-gray-900"}`}
+            >
+              <Icon className="h-5 w-5" />
+            </Link>
+          );
+        })}
       </nav>
     </aside>
   );
 }
 
-export function TopHeaderNav() {
+export function TopHeaderNav({ user }: { user: AdminUser | null }) {
   const pathname = usePathname();
-  const [userEmail, setUserEmail] = useState<string>("admin@msme.gov.in");
-  const [userName, setUserName] = useState<string>("Admin User");
-  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
-
-  useEffect(() => {
-    try {
-      const supabase = createClient();
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (user?.email) {
-          setUserEmail(user.email);
-          const metaName = user.user_metadata?.full_name || user.email.split("@")[0];
-          setUserName(metaName.charAt(0).toUpperCase() + metaName.slice(1));
-        }
-      }).catch(() => {
-        // Fallback default
-      });
-    } catch {
-      // Fallback default
-    }
-  }, []);
-
-  const initials = userName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .substring(0, 2)
-    .toUpperCase() || "AU";
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    await logout();
-  };
-
-  const isOverview = pathname === "/";
-  const isSchemes = pathname.startsWith("/schemes");
-  const isTickets = pathname.startsWith("/tickets");
-  const isNotifications = pathname.startsWith("/notifications");
-  const isReleases = pathname.startsWith("/releases");
+  const [leaving, setLeaving] = useState(false);
+  const name = user?.name?.trim() || user?.email?.split("@")[0] || "Admin";
+  const initials = name.split(/\s+/).map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "A";
 
   return (
-    <header className="h-16 sm:h-20 flex items-center justify-between px-3 sm:px-8 shrink-0 gap-3 border-b border-gray-100 md:border-none bg-white md:bg-transparent">
-      {/* Mobile Logo on small screens */}
-      <Link href="/" className="md:hidden w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center text-white font-extrabold text-base shadow-sm shrink-0">
-        A
+    <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-gray-100 bg-white px-3 sm:h-20 sm:px-8 md:border-none md:bg-transparent">
+      <Link href="/" aria-label="MSS Admin home" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-500 text-base font-extrabold text-white shadow-sm md:hidden">
+        M
       </Link>
 
-      {/* Pill Navigation Bar with Dynamic Active States (Scrollable on phone width) */}
-      <div className="overflow-x-auto no-scrollbar py-1 max-w-full">
-        <div className="bg-white rounded-full p-1 sm:p-1.5 shadow-sm border border-gray-100 flex items-center gap-1 shrink-0">
-          <Link 
-            href="/" 
-            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
-              isOverview 
-                ? "bg-orange-500 text-white shadow-sm shadow-orange-500/20" 
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            Overview
-          </Link>
-
-          <Link 
-            href="/schemes" 
-            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap ${
-              isSchemes 
-                ? "bg-orange-500 text-white shadow-sm shadow-orange-500/20" 
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            Schemes
-          </Link>
-
-          <Link 
-            href="/tickets" 
-            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap ${
-              isTickets 
-                ? "bg-orange-500 text-white shadow-sm shadow-orange-500/20" 
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            Bug Reports
-          </Link>
-
-          <Link 
-            href="/notifications" 
-            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap ${
-              isNotifications 
-                ? "bg-orange-500 text-white shadow-sm shadow-orange-500/20" 
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            Announcements
-          </Link>
-
-          <Link 
-            href="/releases" 
-            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap ${
-              isReleases 
-                ? "bg-orange-500 text-white shadow-sm shadow-orange-500/20" 
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            Releases
-          </Link>
+      <nav aria-label="Sections" className="no-scrollbar max-w-full overflow-x-auto py-1">
+        <div className="flex shrink-0 items-center gap-1 rounded-full border border-gray-100 bg-white p-1 shadow-sm sm:p-1.5">
+          {NAV.filter((n) => n.href !== "/schemes/new" && n.href !== "/schemes/upload").map(({ href, label, active }) => {
+            const on = active(pathname) || (href === "/schemes" && pathname.startsWith("/schemes"));
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={on ? "page" : undefined}
+                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-200 sm:px-4 sm:py-2 sm:text-sm ${on ? "bg-orange-500 text-white shadow-sm shadow-orange-500/20" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
+              >
+                {label}
+              </Link>
+            );
+          })}
         </div>
-      </div>
+      </nav>
 
-      {/* Right Controls / Admin Profile */}
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        <Link href="/notifications" className="bg-white rounded-full p-2 sm:p-2.5 shadow-sm border border-gray-100 text-gray-500 hover:text-orange-600 transition-colors" title="Announcements & Alerts">
-          <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
-        </Link>
-        <div className="bg-white rounded-full pl-1.5 sm:pl-2 pr-2.5 sm:pr-3 py-1 sm:py-1.5 shadow-sm border border-gray-100 flex items-center gap-2 sm:gap-3">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs border border-orange-200 shrink-0">
-            {initials}
-          </div>
-          <div className="hidden sm:flex flex-col">
-            <span className="text-sm font-semibold text-gray-900 leading-tight">{userName}</span>
-            <span className="text-xs text-gray-500 leading-tight font-mono">{userEmail}</span>
-          </div>
-          <button
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            title="Sign out of Admin Portal"
-            className="p-1 sm:p-1.5 rounded-full text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          </button>
+      <div className="flex shrink-0 items-center gap-2 rounded-full border border-gray-100 bg-white py-1 pl-1.5 pr-2.5 shadow-sm sm:gap-3 sm:py-1.5 sm:pl-2 sm:pr-3">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-orange-200 bg-orange-100 text-xs font-bold text-orange-600 sm:h-8 sm:w-8" aria-hidden>
+          {initials}
         </div>
+        <div className="hidden flex-col sm:flex">
+          <span className="text-sm font-semibold leading-tight text-gray-900">{name}</span>
+          {user?.email && <span className="font-mono text-xs leading-tight text-gray-500">{user.email}</span>}
+        </div>
+        <button
+          type="button"
+          onClick={async () => { setLeaving(true); await logout(); }}
+          disabled={leaving}
+          title="Sign out"
+          aria-label="Sign out"
+          className="cursor-pointer rounded-full p-1 text-gray-400 transition-colors hover:bg-rose-50 hover:text-rose-600 sm:p-1.5"
+        >
+          <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+        </button>
       </div>
     </header>
   );

@@ -1,29 +1,35 @@
-import { fetchCurrentRelease, fetchReleaseHistory } from "@/app/releases/actions";
-import { ReleasesManager } from "@/components/releases/ReleasesManager";
+import { describeError } from "@/lib/mss/api";
+import { latestRelease, listAllDrafts } from "@/lib/mss/schemes";
+import { draftName } from "@/lib/mss/types";
+import { Notice, PageHeader, formatDate } from "@/components/admin/ui";
+import { ReleasesManager, type OpenDraft } from "@/components/releases/ReleasesManager";
 
-export const revalidate = 0; // Disable caching
+export const dynamic = "force-dynamic";
 
 export default async function ReleasesPage() {
-  const [currentRes, historyRes] = await Promise.all([
-    fetchCurrentRelease(),
-    fetchReleaseHistory(),
-  ]);
+  let drafts: OpenDraft[] = [];
+  let error: string | null = null;
+  const release = await latestRelease().catch(() => null);
+  try {
+    drafts = (await listAllDrafts())
+      .filter((d) => d.status === "draft" || d.status === "approved")
+      .map((d) => ({ id: d.id, schemeId: d.scheme_id, name: draftName(d), status: d.status, action: d.action, version: d.version }))
+      .sort((a, b) => a.schemeId.localeCompare(b.schemeId));
+  } catch (e) {
+    error = describeError(e);
+  }
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-1">
-          Catalog Releases & OTA Sync
-        </h1>
-        <p className="text-gray-500">
-          Manage, verify, and publish canonical offline catalog bundles synchronized to citizen mobile clients.
-        </p>
-      </div>
-
-      <ReleasesManager 
-        currentRelease={currentRes.data} 
-        history={historyRes.data || []} 
+    <div className="mx-auto max-w-5xl">
+      <PageHeader
+        title="Releases"
+        description={
+          release
+            ? `Live release ${release.release_version}, published ${formatDate(release.published_at)}.`
+            : "No scheme release has been published yet."
+        }
       />
+      {error ? <Notice tone="error">Could not load drafts: {error}</Notice> : <ReleasesManager drafts={drafts} />}
     </div>
   );
 }

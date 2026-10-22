@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MSS Admin
 
-## Getting Started
+Admin panel for the MSS (MSME Schemes) app. Admins create and edit schemes, upload the 2026 datasets, approve changes, publish releases to the app and send notifications. Everything goes through the **MSS REST API** (`https://mssapi.msmeschemes.org`); this site has no database of its own and no Supabase.
 
-First, run the development server:
+## How it works
+
+- **Sign-in**: an MSS account's email and password (`POST /v1/auth/password/login`). The site then calls `GET /v1/admin/security/status` and refuses accounts without the server-provisioned admin role.
+- **Session**: the access token (~15 min) and rotating refresh token live only in httpOnly cookies. `src/proxy.ts` refreshes them shortly before they expire, so pages and Server Actions always have a valid bearer. Browser code never sees a token.
+- **API calls** run server-side only (`src/lib/mss/`, guarded by `server-only`). The API enforces the admin role on every request.
+- **Publishing workflow** (API entries 03–12):
+  1. **Draft**: create or edit a scheme in the editor (form, or the full record as JSON), or upload a dataset file (preview → stage as drafts).
+  2. **Approve**: each draft revision is approved with a 10–2000 character review note (bulk approval on Releases respects the 20 requests/minute admin quota).
+  3. **Publish**: publish approved drafts as a new catalogue release. Apps pick it up on their next catalogue check.
+  Withdrawing a published scheme is a draft too (`action: withdraw`).
+- **Notifications**: `POST /v1/admin/notifications` delivers to one user's in-app inbox and, where the device is registered, a push notification. The API has no broadcast endpoint yet, so "notify everyone when a scheme is published" needs a server change.
+
+## Pages
+
+| Route | Purpose |
+| --- | --- |
+| `/` | API health, draft counts, live release, recent changes |
+| `/schemes` | All drafts with search, status and collection filters; withdraw |
+| `/schemes/new`, `/schemes/[id]` | Scheme editor, approve/discard, audit history |
+| `/schemes/upload` | Dataset upload: preview, then stage as drafts |
+| `/releases` | Approve waiting drafts, publish approved ones |
+| `/notifications` | Send a notification to a user |
+
+## Running it
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Environment (optional):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Default | |
+| --- | --- | --- |
+| `MSS_API_BASE_URL` | `https://mssapi.msmeschemes.org` | API origin, with or without `/v1` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Checks: `npx tsc --noEmit`, `npx eslint src`, `npm run build`.

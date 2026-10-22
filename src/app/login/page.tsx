@@ -11,7 +11,8 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const error = params?.error;
-  const redirectTo = params?.redirectTo || '/';
+  const raw = params?.redirectTo || '/';
+  const redirectTo = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#F4F7F9] relative overflow-hidden font-sans p-4">
@@ -28,7 +29,7 @@ export default async function LoginPage({
             Admin Portal
           </CardTitle>
           <CardDescription className="text-gray-500 font-medium">
-            Sign in to manage MSME Schemes
+            Sign in with your MSS admin account
           </CardDescription>
         </CardHeader>
         
@@ -39,7 +40,7 @@ export default async function LoginPage({
           
           <CardContent className="space-y-6 px-10">
             {error && (
-              <div className="rounded-xl bg-red-50 p-4 text-sm text-red-600 border border-red-100 text-center font-medium">
+              <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-600 border border-red-100 text-center font-medium">
                 {error}
               </div>
             )}
@@ -50,7 +51,8 @@ export default async function LoginPage({
                 id="email" 
                 name="email" 
                 type="email" 
-                placeholder="admin@test.com"
+                placeholder="you@example.com"
+                autoComplete="username"
                 required 
                 className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-orange-500 rounded-xl h-12 px-4 shadow-sm" 
               />
@@ -65,6 +67,7 @@ export default async function LoginPage({
                 name="password" 
                 type="password" 
                 placeholder="••••••••" 
+                autoComplete="current-password"
                 required 
                 className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-orange-500 rounded-xl h-12 px-4 shadow-sm" 
               />
