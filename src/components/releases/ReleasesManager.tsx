@@ -16,11 +16,13 @@ export interface OpenDraft {
   version: number;
 }
 
+const NOTE = "This MSS server doesn't support notification broadcasts yet (it needs the API update with migration 020). Ask the backend developer to deploy it.";
+
 /** The API allows 20 scheme-admin requests per minute per admin. */
 const APPROVE_GAP_MS = 3_200;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export function ReleasesManager({ drafts }: { drafts: OpenDraft[] }) {
+export function ReleasesManager({ drafts, notifySupported }: { drafts: OpenDraft[]; notifySupported: boolean }) {
   const router = useRouter();
   const waiting = useMemo(() => drafts.filter((d) => d.status === "draft"), [drafts]);
   const approved = useMemo(() => drafts.filter((d) => d.status === "approved"), [drafts]);
@@ -30,7 +32,8 @@ export function ReleasesManager({ drafts }: { drafts: OpenDraft[] }) {
   const [note, setNote] = useState("");
   const [progress, setProgress] = useState<{ done: number; total: number; failed: string[] } | null>(null);
   const [message, setMessage] = useState<{ tone: "error" | "success" | "warn"; text: ReactNode } | null>(null);
-  const [notify, setNotify] = useState(true);
+  // Older API releases reject `notify` and would fail the whole publish.
+  const [notify, setNotify] = useState(notifySupported);
   const [pending, start] = useTransition();
   const cancel = useRef(false);
   // One idempotency key per exact publish request, kept across retries so an
@@ -125,8 +128,14 @@ export function ReleasesManager({ drafts }: { drafts: OpenDraft[] }) {
         title={`Ready to publish (${approved.length})`}
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input type="checkbox" className="h-4 w-4 accent-orange-500" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+            <label className={`flex items-center gap-2 text-sm ${notifySupported ? "text-gray-700" : "text-gray-400"}`}>
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-orange-500"
+                checked={notify}
+                disabled={!notifySupported}
+                onChange={(e) => setNotify(e.target.checked)}
+              />
               Notify users
             </label>
             <button type="button" className={btn.primary} disabled={pending || running || !publishCount} onClick={publish}>
@@ -135,6 +144,7 @@ export function ReleasesManager({ drafts }: { drafts: OpenDraft[] }) {
           </div>
         }
       >
+        {!notifySupported && <div className="mb-3"><Notice tone="warn">Notify users is unavailable: {NOTE}</Notice></div>}
         <p className="mb-3 text-xs text-gray-500">
           With <strong>Notify users</strong>, everyone in the states the published schemes cover (all users for nationwide schemes) gets a
           “New schemes” notification in the app and on their phone. Withdrawals alone notify nobody.

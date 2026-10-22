@@ -9,7 +9,7 @@ import { BroadcastProgressCard } from "./BroadcastProgressCard";
 const newKey = () => crypto.randomUUID();
 
 /** Send one notification to all users, or to the users in some states/languages. */
-export function BroadcastForm({ initialBroadcastId }: { initialBroadcastId?: string }) {
+export function BroadcastForm({ initialBroadcastId, supported }: { initialBroadcastId?: string; supported: boolean }) {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [type, setType] = useState("new_schemes");
@@ -83,6 +83,7 @@ export function BroadcastForm({ initialBroadcastId }: { initialBroadcastId?: str
       {tracking && <BroadcastProgressCard key={tracking} broadcastId={tracking} />}
       <Panel title="Send to many users">
         <form onSubmit={send} className="space-y-4">
+          {!supported && <Notice tone="warn">This MSS server doesn&apos;t support notification broadcasts yet (it needs the API update with migration 020). Ask the backend developer to deploy it.</Notice>}
           {result && <Notice tone={result.tone}>{result.text}</Notice>}
           <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
             <label className="block space-y-1.5">
@@ -157,7 +158,7 @@ export function BroadcastForm({ initialBroadcastId }: { initialBroadcastId?: str
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
             <span className="text-xs text-gray-500">Sends to {audienceText}. Limit: 5 broadcasts per hour (including “Notify users” on publish).</span>
-            <button type="submit" className={btn.primary} disabled={pending}>{pending ? "Sending…" : "Send broadcast"}</button>
+            <button type="submit" className={btn.primary} disabled={pending || !supported}>{pending ? "Sending…" : "Send broadcast"}</button>
           </div>
         </form>
       </Panel>

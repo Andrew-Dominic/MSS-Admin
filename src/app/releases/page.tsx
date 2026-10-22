@@ -1,5 +1,5 @@
 import { describeError } from "@/lib/mss/api";
-import { latestRelease, listAllDrafts } from "@/lib/mss/schemes";
+import { broadcastsSupported, latestRelease, listAllDrafts } from "@/lib/mss/schemes";
 import { draftName } from "@/lib/mss/types";
 import { Notice, PageHeader, formatDate } from "@/components/admin/ui";
 import { ReleasesManager, type OpenDraft } from "@/components/releases/ReleasesManager";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function ReleasesPage() {
   let drafts: OpenDraft[] = [];
   let error: string | null = null;
-  const release = await latestRelease().catch(() => null);
+  const [release, notifySupported] = await Promise.all([latestRelease().catch(() => null), broadcastsSupported()]);
   try {
     drafts = (await listAllDrafts())
       .filter((d) => d.status === "draft" || d.status === "approved")
@@ -29,7 +29,7 @@ export default async function ReleasesPage() {
             : "No scheme release has been published yet."
         }
       />
-      {error ? <Notice tone="error">Could not load drafts: {error}</Notice> : <ReleasesManager drafts={drafts} />}
+      {error ? <Notice tone="error">Could not load drafts: {error}</Notice> : <ReleasesManager drafts={drafts} notifySupported={notifySupported} />}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { mssApi } from "./api";
+import { MssApiError, mssApi } from "./api";
 import type {
   BroadcastLanguage,
   BroadcastProgress,
@@ -168,6 +168,21 @@ export async function sendBroadcast(
     headers: { "Idempotency-Key": campaignKey },
   });
   return data;
+}
+
+/**
+ * Whether the API has the broadcast feature (API release with migration 020).
+ * Asks for a broadcast that can't exist: a server with the feature answers
+ * BROADCAST_NOT_FOUND; an older one has no such route. Older servers also
+ * reject `notify` on publish, so callers must not send it to them.
+ */
+export async function broadcastsSupported(): Promise<boolean> {
+  try {
+    await mssApi(`/admin/notifications/broadcasts/00000000-0000-4000-8000-000000000000`);
+    return true;
+  } catch (e) {
+    return e instanceof MssApiError && e.code === "BROADCAST_NOT_FOUND";
+  }
 }
 
 export async function getBroadcast(id: string): Promise<BroadcastProgress> {
