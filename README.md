@@ -12,7 +12,12 @@ Admin panel for the MSS (MSME Schemes) app. Admins create and edit schemes, uplo
   2. **Approve**: each draft revision is approved with a 10–2000 character review note (bulk approval on Releases respects the 20 requests/minute admin quota).
   3. **Publish**: publish approved drafts as a new catalogue release. Apps pick it up on their next catalogue check.
   Withdrawing a published scheme is a draft too (`action: withdraw`).
-- **Notifications**: `POST /v1/admin/notifications` delivers to one user's in-app inbox and, where the device is registered, a push notification. The API has no broadcast endpoint yet, so "notify everyone when a scheme is published" needs a server change.
+- **Notifications**:
+  - **Publish with "Notify users"** (on by default): `POST /v1/admin/schemes/releases` with `notify: true` queues one "New schemes" broadcast to the users in the states the published schemes cover (everyone for nationwide schemes). Withdrawals-only releases notify nobody.
+  - **Broadcast** (`POST /v1/admin/notifications/broadcast`): one message to all users, or to users in chosen states and/or app languages. Delivery progress is polled every 6 s from `GET /v1/admin/notifications/broadcasts/:id` (the API asks for ≥ 5 s).
+  - **Single user** (`POST /v1/admin/notifications`).
+  - Limit: 5 broadcasts per hour per admin, shared with publish-and-notify. Every campaign and publish keeps one idempotency key across retries, so a retry after a timeout never sends or publishes twice.
+  - States are sent as the API's lower-case ISO 3166-2:IN codes (`tn`, `mh`, …), the same 36 the app uses.
 
 ## Pages
 
@@ -23,7 +28,7 @@ Admin panel for the MSS (MSME Schemes) app. Admins create and edit schemes, uplo
 | `/schemes/new`, `/schemes/[id]` | Scheme editor, approve/discard, audit history |
 | `/schemes/upload` | Dataset upload: preview, then stage as drafts |
 | `/releases` | Approve waiting drafts, publish approved ones |
-| `/notifications` | Send a notification to a user |
+| `/notifications` | Broadcast to all users or by state/language, track delivery, or message one user |
 
 ## Running it
 

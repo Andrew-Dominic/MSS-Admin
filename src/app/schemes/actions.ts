@@ -125,11 +125,21 @@ export async function stageDataset(uploadId: string): Promise<ActionResult<{ dra
   }
 }
 
-export async function publishApproved(drafts: { id: string; version: number }[]): Promise<ActionResult<PublishResult>> {
+/**
+ * [publishKey] is created by the page for this exact selection and reused if
+ * the admin retries after an uncertain failure, so the API replays the
+ * original release instead of publishing twice.
+ */
+export async function publishApproved(
+  drafts: { id: string; version: number }[],
+  publishKey: string,
+  notify: boolean,
+): Promise<ActionResult<PublishResult>> {
   if (!drafts.length) return { ok: false, error: "Select at least one approved draft." };
   if (drafts.length > 2000) return { ok: false, error: "Publish at most 2000 drafts at a time." };
+  if (!/^[A-Za-z0-9_-]{16,100}$/.test(publishKey)) return { ok: false, error: "Reload the page and try again." };
   try {
-    const result = await publishDrafts(drafts, newIdempotencyKey("publish"));
+    const result = await publishDrafts(drafts, publishKey, notify);
     refresh();
     return { ok: true, data: result };
   } catch (e) {

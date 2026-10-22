@@ -1,14 +1,23 @@
-import { Notice, PageHeader } from "@/components/admin/ui";
+import { PageHeader } from "@/components/admin/ui";
+import { BroadcastForm } from "@/components/notifications/BroadcastForm";
 import { NotifyUserForm } from "@/components/notifications/NotifyUserForm";
 
-export default function NotificationsPage() {
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export default async function NotificationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ broadcast?: string | string[] }>;
+}) {
+  const { broadcast } = await searchParams;
+  const id = typeof broadcast === "string" && UUID.test(broadcast) ? broadcast : undefined;
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      <PageHeader title="Notifications" description="Send a message to a user's in-app inbox and phone." />
-      <Notice tone="info">
-        The MSS API currently sends notifications to <strong>one user at a time</strong>. Sending to everyone, or to all users
-        in a state when a scheme is published, needs a new endpoint on the MSS server.
-      </Notice>
+      <PageHeader
+        title="Notifications"
+        description="Send messages to users' in-app inbox and phones. Publishing schemes with “Notify users” sends a New schemes notification automatically."
+      />
+      <BroadcastForm initialBroadcastId={id} />
       <NotifyUserForm />
     </div>
   );

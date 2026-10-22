@@ -1,7 +1,18 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { mssApi } from "./api";
-import type { Collection, Draft, PublishResult, ReleaseInfo, SchemeRecord, UploadPreview } from "./types";
+import type {
+  BroadcastLanguage,
+  BroadcastProgress,
+  BroadcastReceipt,
+  Collection,
+  Draft,
+  NotificationType,
+  PublishResult,
+  ReleaseInfo,
+  SchemeRecord,
+  UploadPreview,
+} from "./types";
 
 /** `If-Match` value for a draft revision. */
 export const draftEtag = (version: number) => `"draft-${version}"`;
@@ -90,10 +101,19 @@ export async function stageUpload(uploadId: string): Promise<Draft[]> {
   return data?.drafts ?? [];
 }
 
-export async function publishDrafts(drafts: { id: string; version: number }[], idempotencyKey: string): Promise<PublishResult> {
+/**
+ * Publish approved drafts as one release. With `notify`, the API also queues a
+ * `new_schemes` broadcast to the users the published schemes cover. Retry an
+ * uncertain publish with the SAME key and body to recover its response.
+ */
+export async function publishDrafts(
+  drafts: { id: string; version: number }[],
+  idempotencyKey: string,
+  notify = false,
+): Promise<PublishResult> {
   const { data } = await mssApi<PublishResult>(`/admin/schemes/releases`, {
     method: "POST",
-    body: { drafts },
+    body: notify ? { drafts, notify: true } : { drafts },
     headers: { "Idempotency-Key": idempotencyKey },
     timeoutMs: 120_000,
   });
@@ -118,13 +138,40 @@ export async function sendNotification(input: {
   user_id: string;
   title: string;
   message: string;
-  notification_type: "new_schemes" | "reminders" | "updates" | "profile";
+  notification_type: NotificationType;
 }): Promise<{ id: string; created_at: string }> {
   const { data } = await mssApi<{ id: string; created_at: string }>(`/admin/notifications`, {
     method: "POST",
     body: input,
     headers: { "Idempotency-Key": randomUUID() },
   });
+  return data;
+}
+
+/**
+ * Queue a notification to all users, or to the users in some states and/or
+ * languages. [campaignKey] is a UUID kept for the whole campaign so a retry
+ * replays instead of sending twice.
+ */
+export async function sendBroadcast(
+  input: {
+    title: string;
+    message: string;
+    notification_type: NotificationType;
+    audience: { states?: string[]; languages?: BroadcastLanguage[] };
+  },
+  campaignKey: string,
+): Promise<BroadcastReceipt> {
+  const { data } = await mssApi<BroadcastReceipt>(`/admin/notifications/broadcast`, {
+    method: "POST",
+    body: input,
+    headers: { "Idempotency-Key": campaignKey },
+  });
+  return data;
+}
+
+export async function getBroadcast(id: string): Promise<BroadcastProgress> {
+  const { data } = await mssApi<BroadcastProgress>(`/admin/notifications/broadcasts/${encodeURIComponent(id)}`);
   return data;
 }
 

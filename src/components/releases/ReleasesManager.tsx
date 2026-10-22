@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { approveScheme, publishApproved } from "@/app/schemes/actions";
 import type { DraftAction, DraftStatus } from "@/lib/mss/types";
 import { Notice, Panel, StatusBadge, btn, field } from "@/components/admin/ui";
@@ -26,11 +26,16 @@ export function ReleasesManager({ drafts }: { drafts: OpenDraft[] }) {
   const approved = useMemo(() => drafts.filter((d) => d.status === "approved"), [drafts]);
   const [toApprove, setToApprove] = useState<Set<string>>(new Set());
   const [toPublish, setToPublish] = useState<Set<string>>(() => new Set(approved.map((d) => d.id)));
+  const selectedApproved = useMemo(() => approved.filter((d) => toPublish.has(d.id)), [approved, toPublish]);
   const [note, setNote] = useState("");
   const [progress, setProgress] = useState<{ done: number; total: number; failed: string[] } | null>(null);
-  const [message, setMessage] = useState<{ tone: "error" | "success" | "warn"; text: string } | null>(null);
+  const [message, setMessage] = useState<{ tone: "error" | "success" | "warn"; text: ReactNode } | null>(null);
+  const [notify, setNotify] = useState(true);
   const [pending, start] = useTransition();
   const cancel = useRef(false);
+  // One idempotency key per exact publish request, kept across retries so an
+  // uncertain failure can be retried without publishing (or notifying) twice.
+  const publishKey = useRef<{ request: string; key: string } | null>(null);
 
   const toggle = (set: Set<string>, id: string, update: (s: Set<string>) => void) => {
     const next = new Set(set);
@@ -67,24 +72,50 @@ export function ReleasesManager({ drafts }: { drafts: OpenDraft[] }) {
   }
 
   function publish() {
-    const list = approved.filter((d) => toPublish.has(d.id)).map((d) => ({ id: d.id, version: d.version }));
+    const list = selectedApproved.map((d) => ({ id: d.id, version: d.version }));
     if (!list.length) return;
-    if (!confirm(`Publish ${list.length} approved scheme change(s) to the app now?`)) return;
+    const ask = notify
+      ? `Publish ${list.length} approved scheme change(s) to the app and notify the users they apply to?`
+      : `Publish ${list.length} approved scheme change(s) to the app now, without notifying users?`;
+    if (!confirm(ask)) return;
+    const request = JSON.stringify({ list, notify });
+    if (publishKey.current?.request !== request) {
+      publishKey.current = { request, key: `publish-${crypto.randomUUID()}` };
+    }
+    const key = publishKey.current.key;
     setMessage(null);
     start(async () => {
-      const res = await publishApproved(list);
+      const res = await publishApproved(list, key, notify);
       if (!res.ok) return setMessage({ tone: "error", text: res.error });
+      publishKey.current = null;
+      const b = res.data.broadcast;
       setMessage({
         tone: "success",
-        text: res.data.replayed
-          ? `Already published as release ${res.data.release_version}.`
-          : `Published ${res.data.published} change(s) as release ${res.data.release_version}. Apps pick it up on their next catalogue check.`,
+        text: (
+          <>
+            {res.data.replayed
+              ? `Already published as release ${res.data.release_version}.`
+              : `Published ${res.data.published} change(s) as release ${res.data.release_version}. Apps pick it up on their next catalogue check.`}
+            {b && (
+              <>
+                {" "}
+                Notifying {b.recipients.toLocaleString("en-IN")} user(s).{" "}
+                <Link className="font-semibold underline" href={`/notifications?broadcast=${b.broadcast_id}`}>
+                  Track delivery
+                </Link>
+              </>
+            )}
+            {notify && b === null && " No notification was sent: the release only withdraws schemes."}
+          </>
+        ),
       });
       router.refresh();
     });
   }
 
   const running = progress !== null && progress.done < progress.total;
+  // Only drafts still approved count: published ones leave the list on refresh.
+  const publishCount = selectedApproved.length;
 
   return (
     <div className="space-y-5">
@@ -93,11 +124,21 @@ export function ReleasesManager({ drafts }: { drafts: OpenDraft[] }) {
       <Panel
         title={`Ready to publish (${approved.length})`}
         actions={
-          <button type="button" className={btn.primary} disabled={pending || running || !toPublish.size} onClick={publish}>
-            {pending ? "Publishing…" : `Publish ${toPublish.size || ""}`.trim()}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" className="h-4 w-4 accent-orange-500" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+              Notify users
+            </label>
+            <button type="button" className={btn.primary} disabled={pending || running || !publishCount} onClick={publish}>
+              {pending ? "Publishing…" : `Publish ${publishCount || ""}`.trim()}
+            </button>
+          </div>
         }
       >
+        <p className="mb-3 text-xs text-gray-500">
+          With <strong>Notify users</strong>, everyone in the states the published schemes cover (all users for nationwide schemes) gets a
+          “New schemes” notification in the app and on their phone. Withdrawals alone notify nobody.
+        </p>
         {approved.length === 0 ? (
           <p className="text-sm text-gray-500">No approved drafts. Approve drafts below first.</p>
         ) : (

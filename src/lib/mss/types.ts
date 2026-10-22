@@ -105,11 +105,86 @@ export interface ReleaseInfo {
   published_at: string;
 }
 
+export interface BroadcastReceipt {
+  broadcast_id: string;
+  recipients: number;
+  created_at: string;
+}
+
 export interface PublishResult {
   release_version: string;
   published: number;
   replayed: boolean;
+  /** Present when published with `notify: true`; null for withdrawals-only releases. */
+  broadcast?: BroadcastReceipt | null;
 }
+
+export type NotificationType = "new_schemes" | "reminders" | "updates" | "profile";
+export const NOTIFICATION_TYPES: { value: NotificationType; label: string }[] = [
+  { value: "new_schemes", label: "New schemes" },
+  { value: "updates", label: "Updates" },
+  { value: "reminders", label: "Reminders" },
+  { value: "profile", label: "Profile" },
+];
+
+export type BroadcastLanguage = "en" | "ta" | "hi" | "mr";
+export const BROADCAST_LANGUAGES: { value: BroadcastLanguage; label: string }[] = [
+  { value: "en", label: "English" },
+  { value: "ta", label: "Tamil" },
+  { value: "hi", label: "Hindi" },
+  { value: "mr", label: "Marathi" },
+];
+
+export interface BroadcastProgress {
+  broadcast_id: string;
+  recipients: number;
+  delivered: number;
+  failed: number;
+  status: "queued" | "processing" | "completed" | "completed_with_errors";
+}
+
+/**
+ * The API's internal state codes: lower-case ISO 3166-2:IN subdivision codes,
+ * the same 36 the app stores (frontend indian_states.dart).
+ */
+export const STATES: { code: string; name: string }[] = [
+  { code: "an", name: "Andaman and Nicobar Islands" },
+  { code: "ap", name: "Andhra Pradesh" },
+  { code: "ar", name: "Arunachal Pradesh" },
+  { code: "as", name: "Assam" },
+  { code: "br", name: "Bihar" },
+  { code: "ch", name: "Chandigarh" },
+  { code: "ct", name: "Chhattisgarh" },
+  { code: "dh", name: "Dadra and Nagar Haveli and Daman and Diu" },
+  { code: "dl", name: "Delhi" },
+  { code: "ga", name: "Goa" },
+  { code: "gj", name: "Gujarat" },
+  { code: "hp", name: "Himachal Pradesh" },
+  { code: "hr", name: "Haryana" },
+  { code: "jh", name: "Jharkhand" },
+  { code: "jk", name: "Jammu and Kashmir" },
+  { code: "ka", name: "Karnataka" },
+  { code: "kl", name: "Kerala" },
+  { code: "la", name: "Ladakh" },
+  { code: "ld", name: "Lakshadweep" },
+  { code: "mh", name: "Maharashtra" },
+  { code: "ml", name: "Meghalaya" },
+  { code: "mn", name: "Manipur" },
+  { code: "mp", name: "Madhya Pradesh" },
+  { code: "mz", name: "Mizoram" },
+  { code: "nl", name: "Nagaland" },
+  { code: "od", name: "Odisha" },
+  { code: "pb", name: "Punjab" },
+  { code: "py", name: "Puducherry" },
+  { code: "rj", name: "Rajasthan" },
+  { code: "sk", name: "Sikkim" },
+  { code: "tg", name: "Telangana" },
+  { code: "tn", name: "Tamil Nadu" },
+  { code: "tr", name: "Tripura" },
+  { code: "uk", name: "Uttarakhand" },
+  { code: "up", name: "Uttar Pradesh" },
+  { code: "wb", name: "West Bengal" },
+];
 
 export function draftName(d: Draft): string {
   const en = d.payload?.localizations?.find((l) => l.language === "en")?.content?.name;
