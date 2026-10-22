@@ -17,7 +17,8 @@ export function DitherCanvas({ className = "" }: { className?: string }) {
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const CELL = 9; // grid pitch in CSS px
-    const COLORS = ["#bfdbfe", "#60a5fa", "#2563eb", "#1d4ed8", "#01284f"];
+    // Light MSS blues only; diamonds never touch, so white always shows through.
+    const COLORS = ["#dbeafe", "#bfdbfe", "#93c5fd", "#60a5fa", "#3b82f6", "#2563eb"];
     // Soft blobs: position (0..1), radius, drift speed and phase.
     const blobs = [
       { x: 0.72, y: 0.3, r: 0.42, sx: 0.07, sy: 0.05, p: 0 },
@@ -56,7 +57,7 @@ export function DitherCanvas({ className = "" }: { className?: string }) {
       const centres = blobs.map((b) => ({
         x: (b.x + Math.sin(t * b.sx + b.p) * 0.08) * w,
         y: (b.y + Math.cos(t * b.sy + b.p) * 0.08) * h,
-        r: b.r * Math.max(w, h),
+        r: b.r * Math.min(Math.max(w, h), 900),
       }));
       for (let j = 0; j < rows; j++) {
         for (let i = 0; i < cols; i++) {
@@ -68,6 +69,7 @@ export function DitherCanvas({ className = "" }: { className?: string }) {
             const dy = y - c.y;
             v += Math.exp(-(dx * dx + dy * dy) / (c.r * c.r));
           }
+          v *= 0.62; // overall density: airy, not solid
           // Fade towards the left edge so the form side stays clean.
           v *= Math.min(1, Math.max(0, (x / w - 0.12) * 1.6));
           v += (grain(i, j) - 0.5) * 0.35;
@@ -81,14 +83,14 @@ export function DitherCanvas({ className = "" }: { className?: string }) {
             const fall = Math.exp(-d2 / (R * R)) * mouse.strength;
             // Ripple ring travelling outwards from the cursor.
             const ring = Math.sin(Math.sqrt(d2) / 14 - t * 6) * 0.5 + 0.5;
-            v += fall * (0.9 + ring * 0.6);
+            v += fall * (0.55 + ring * 0.4);
             const d = Math.sqrt(d2) || 1;
-            px += (dx / d) * fall * 10;
-            py += (dy / d) * fall * 10;
+            px += (dx / d) * fall * 5;
+            py += (dy / d) * fall * 5;
           }
           if (v < 0.18) continue;
-          const size = Math.min(1.25, v) * CELL * 0.62;
-          ctx.fillStyle = COLORS[Math.min(COLORS.length - 1, Math.floor(v * COLORS.length * 0.8))];
+          const size = Math.min(1, v) * CELL * 0.44; // < half the pitch: dots stay separate
+          ctx.fillStyle = COLORS[Math.min(COLORS.length - 1, Math.floor(Math.min(1, v) * COLORS.length))];
           ctx.beginPath();
           ctx.moveTo(px, py - size);
           ctx.lineTo(px + size, py);

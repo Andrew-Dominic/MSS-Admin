@@ -19,9 +19,10 @@ export default async function LoginPage({
 
   return (
     <div className="grid min-h-screen w-full bg-white md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-          {/* Form side */}
-          <div className="mss-fade-up mx-auto flex w-full max-w-md flex-col justify-center px-7 py-12 sm:px-10">
-            <Image src="/brand/mss-logo.webp" alt="MSS" width={88} height={83} priority unoptimized className="mb-8 h-auto w-[88px]" />
+          {/* Form side: a compact card on a soft background */}
+          <div className="flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50/60 px-4 py-10 sm:px-8">
+          <div className="mss-fade-up w-full max-w-sm rounded-3xl bg-white p-7 shadow-[0_20px_50px_-20px_rgba(1,40,79,0.25)] ring-1 ring-slate-200/70 sm:p-9">
+            <Image src="/brand/mss-logo.webp" alt="MSS" width={72} height={68} priority unoptimized className="mb-6 h-auto w-[72px]" />
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Sign In</h1>
             <p className="mt-2 font-mono text-[13px] text-slate-500">Continue to the MSS admin console</p>
 
@@ -47,6 +48,7 @@ export default async function LoginPage({
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
               Admins only · access is granted by the server administrator
             </p>
+          </div>
           </div>
 
           {/* Animated dither side: reacts to the pointer */}
