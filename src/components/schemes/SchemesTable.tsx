@@ -5,7 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 import { Search } from "lucide-react";
 import { COLLECTIONS, type Collection, type DraftAction, type DraftStatus } from "@/lib/mss/types";
 import { withdrawScheme } from "@/app/schemes/actions";
-import { Notice, StatusBadge, btn, field, formatDate } from "@/components/admin/ui";
+import { ConfirmBar, Notice, StatusBadge, btn, field, formatDate } from "@/components/admin/ui";
 
 export interface SchemeRow {
   draftId: string;
@@ -49,8 +49,16 @@ export function SchemesTable({ rows }: { rows: SchemeRow[] }) {
     return c;
   }, [rows]);
 
+  const [confirmRow, setConfirmRow] = useState<SchemeRow | null>(null);
+
   function withdraw(row: SchemeRow) {
-    if (!confirm(`Create a withdrawal draft for ${row.schemeId}? It is removed from the app only after it is approved and published.`)) return;
+    setConfirmRow(row);
+  }
+
+  function confirmWithdraw() {
+    const row = confirmRow;
+    setConfirmRow(null);
+    if (!row) return;
     start(async () => {
       const res = await withdrawScheme(row.schemeId);
       setMessage(res.ok ? { tone: "success", text: `Withdrawal draft created for ${row.schemeId}. Approve and publish it to remove the scheme.` } : { tone: "error", text: res.error });
@@ -69,6 +77,11 @@ export function SchemesTable({ rows }: { rows: SchemeRow[] }) {
   return (
     <div className="space-y-4">
       {message && <Notice tone={message.tone}>{message.text}</Notice>}
+      {confirmRow && (
+        <ConfirmBar confirmLabel="Yes, create withdrawal draft" onConfirm={confirmWithdraw} onCancel={() => setConfirmRow(null)} pending={pending}>
+          Create a withdrawal draft for {confirmRow.schemeId}? It is removed from the app only after it is approved and published.
+        </ConfirmBar>
+      )}
       <div className="grid gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_auto_auto]">
         <label className="relative block">
           <span className="sr-only">Search schemes</span>

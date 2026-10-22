@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { approveScheme, publishApproved } from "@/app/schemes/actions";
 import type { DraftAction, DraftStatus } from "@/lib/mss/types";
-import { Notice, Panel, StatusBadge, btn, field } from "@/components/admin/ui";
+import { ConfirmBar, Notice, Panel, StatusBadge, btn, field } from "@/components/admin/ui";
 
 export interface OpenDraft {
   id: string;
@@ -34,6 +34,7 @@ export function ReleasesManager({ drafts, notifySupported }: { drafts: OpenDraft
   const [message, setMessage] = useState<{ tone: "error" | "success" | "warn"; text: ReactNode } | null>(null);
   // Older API releases reject `notify` and would fail the whole publish.
   const [notify, setNotify] = useState(notifySupported);
+  const [confirmAsk, setConfirmAsk] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const cancel = useRef(false);
   // One idempotency key per exact publish request, kept across retries so an
@@ -80,7 +81,13 @@ export function ReleasesManager({ drafts, notifySupported }: { drafts: OpenDraft
     const ask = notify
       ? `Publish ${list.length} approved scheme change(s) to the app and notify the users they apply to?`
       : `Publish ${list.length} approved scheme change(s) to the app now, without notifying users?`;
-    if (!confirm(ask)) return;
+    setConfirmAsk(ask);
+  }
+
+  function confirmPublish() {
+    setConfirmAsk(null);
+    const list = selectedApproved.map((d) => ({ id: d.id, version: d.version }));
+    if (!list.length) return;
     const request = JSON.stringify({ list, notify });
     if (publishKey.current?.request !== request) {
       publishKey.current = { request, key: `publish-${crypto.randomUUID()}` };
@@ -134,7 +141,10 @@ export function ReleasesManager({ drafts, notifySupported }: { drafts: OpenDraft
                 className="h-4 w-4 accent-orange-500"
                 checked={notify}
                 disabled={!notifySupported}
-                onChange={(e) => setNotify(e.target.checked)}
+                onChange={(e) => {
+                  setNotify(e.target.checked);
+                  setConfirmAsk(null);
+                }}
               />
               Notify users
             </label>
@@ -144,6 +154,13 @@ export function ReleasesManager({ drafts, notifySupported }: { drafts: OpenDraft
           </div>
         }
       >
+        {confirmAsk && (
+          <div className="mb-3">
+            <ConfirmBar confirmLabel="Yes, publish" onConfirm={confirmPublish} onCancel={() => setConfirmAsk(null)} pending={pending}>
+              {confirmAsk}
+            </ConfirmBar>
+          </div>
+        )}
         {!notifySupported && <div className="mb-3"><Notice tone="warn">Notify users is unavailable: {NOTE}</Notice></div>}
         <p className="mb-3 text-xs text-gray-500">
           With <strong>Notify users</strong>, everyone in the states the published schemes cover (all users for nationwide schemes) gets a

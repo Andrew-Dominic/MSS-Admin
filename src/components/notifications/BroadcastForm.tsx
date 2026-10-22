@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { broadcastNotification } from "@/app/notifications/actions";
-import { Notice, Panel, btn, field } from "@/components/admin/ui";
+import { ConfirmBar, Notice, Panel, btn, field } from "@/components/admin/ui";
 import { BROADCAST_LANGUAGES, NOTIFICATION_TYPES, STATES } from "@/lib/mss/types";
 import { BroadcastProgressCard } from "./BroadcastProgressCard";
 
@@ -22,6 +22,7 @@ export function BroadcastForm({ initialBroadcastId, supported }: { initialBroadc
   const [result, setResult] = useState<{ tone: "error" | "success"; text: string } | null>(null);
   const [tracking, setTracking] = useState<string | undefined>(initialBroadcastId);
   const [pending, start] = useTransition();
+  const [confirming, setConfirming] = useState(false);
 
   const shownStates = useMemo(() => {
     const q = stateFilter.trim().toLowerCase();
@@ -48,6 +49,7 @@ export function BroadcastForm({ initialBroadcastId, supported }: { initialBroadc
   const edited = <T,>(set: (v: T) => void) => (v: T) => {
     set(v);
     setCampaignKey(newKey());
+    setConfirming(false);
   };
 
   function send(e: React.FormEvent) {
@@ -56,7 +58,11 @@ export function BroadcastForm({ initialBroadcastId, supported }: { initialBroadc
     if (!everyone && !states.size && !languages.size) {
       return setResult({ tone: "error", text: "Choose at least one state or language, or send to everyone." });
     }
-    if (!confirm(`Send "${title.trim()}" to ${audienceText}? This can't be undone.`)) return;
+    setConfirming(true);
+  }
+
+  function confirmSend() {
+    setConfirming(false);
     start(async () => {
       const res = await broadcastNotification({
         title,
@@ -156,9 +162,14 @@ export function BroadcastForm({ initialBroadcastId, supported }: { initialBroadc
             )}
           </fieldset>
 
+          {confirming && (
+            <ConfirmBar confirmLabel={`Yes, send to ${audienceText}`} onConfirm={confirmSend} onCancel={() => setConfirming(false)} pending={pending}>
+              Send “{title.trim()}” to {audienceText}? This can&apos;t be undone.
+            </ConfirmBar>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
             <span className="text-xs text-gray-500">Sends to {audienceText}. Limit: 5 broadcasts per hour (including “Notify users” on publish).</span>
-            <button type="submit" className={btn.primary} disabled={pending || !supported}>{pending ? "Sending…" : "Send broadcast"}</button>
+            <button type="submit" className={btn.primary} disabled={pending || !supported || confirming}>{pending ? "Sending…" : "Send broadcast"}</button>
           </div>
         </form>
       </Panel>

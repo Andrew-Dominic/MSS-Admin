@@ -78,3 +78,31 @@ export function formatDate(iso?: string | null): string {
     ? "—"
     : d.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" });
 }
+
+/**
+ * In-page "are you sure?" step. Native confirm() dialogs are suppressed by
+ * some browsers and embedded views, where the action then silently did nothing.
+ */
+export function ConfirmBar({
+  children,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+  pending = false,
+}: {
+  children: ReactNode;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  pending?: boolean;
+}) {
+  return (
+    <div role="alertdialog" aria-live="assertive" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+      <p className="font-medium">{children}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" className={btn.primary} disabled={pending} onClick={onConfirm}>{confirmLabel}</button>
+        <button type="button" className={btn.secondary} disabled={pending} onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  );
+}
