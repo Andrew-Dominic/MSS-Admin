@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, FileText, LayoutDashboard, LogOut, PlusCircle, Rocket, Upload, type LucideIcon } from "lucide-react";
+import { Bell, FileText, LayoutDashboard, LogOut, Menu, PlusCircle, Rocket, Upload, X, type LucideIcon } from "lucide-react";
 import { logout } from "@/app/login/actions";
 
 export interface AdminUser {
@@ -18,97 +19,177 @@ interface NavItem {
   active: (path: string) => boolean;
 }
 
-const NAV: NavItem[] = [
-  { href: "/", label: "Overview", icon: LayoutDashboard, active: (p) => p === "/" },
+const SECTIONS: { title: string; items: NavItem[] }[] = [
   {
-    href: "/schemes",
-    label: "Schemes",
-    icon: FileText,
-    active: (p) => p.startsWith("/schemes") && p !== "/schemes/new" && p !== "/schemes/upload",
+    title: "Overview",
+    items: [{ href: "/", label: "Dashboard", icon: LayoutDashboard, active: (p) => p === "/" }],
   },
-  { href: "/schemes/new", label: "New scheme", icon: PlusCircle, active: (p) => p === "/schemes/new" },
-  { href: "/schemes/upload", label: "Upload", icon: Upload, active: (p) => p === "/schemes/upload" },
-  { href: "/releases", label: "Releases", icon: Rocket, active: (p) => p.startsWith("/releases") },
-  { href: "/notifications", label: "Notifications", icon: Bell, active: (p) => p.startsWith("/notifications") },
+  {
+    title: "Catalogue",
+    items: [
+      {
+        href: "/schemes",
+        label: "Schemes",
+        icon: FileText,
+        active: (p) => p.startsWith("/schemes") && p !== "/schemes/new" && p !== "/schemes/upload",
+      },
+      { href: "/schemes/new", label: "New scheme", icon: PlusCircle, active: (p) => p === "/schemes/new" },
+      { href: "/schemes/upload", label: "Upload dataset", icon: Upload, active: (p) => p === "/schemes/upload" },
+      { href: "/releases", label: "Releases", icon: Rocket, active: (p) => p.startsWith("/releases") },
+    ],
+  },
+  {
+    title: "Engage",
+    items: [{ href: "/notifications", label: "Notifications", icon: Bell, active: (p) => p.startsWith("/notifications") }],
+  },
 ];
 
-export function SidebarNav() {
+function initialsOf(user: AdminUser | null): { name: string; initials: string } {
+  const name = user?.name?.trim() || user?.email?.split("@")[0] || "Admin";
+  const initials = name.split(/\s+/).map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "A";
+  return { name, initials };
+}
+
+function Brand({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <Link href="/" onClick={onNavigate} aria-label="MSS Admin home" className="group flex items-center gap-3 px-2">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white shadow-lg shadow-black/20 transition-transform duration-300 group-hover:scale-105">
+        <Image src="/brand/mss-icon.webp" alt="" width={36} height={36} priority unoptimized />
+      </span>
+      <span className="leading-tight">
+        <span className="block text-base font-bold tracking-tight text-white">MSS Admin</span>
+        <span className="block text-xs text-blue-200/70">MSME Schemes console</span>
+      </span>
+    </Link>
+  );
+}
+
+function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  return (
+    <nav aria-label="Main" className="space-y-6">
+      {SECTIONS.map((section) => (
+        <div key={section.title}>
+          <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-blue-200/50">{section.title}</p>
+          <ul className="space-y-1">
+            {section.items.map(({ href, label, icon: Icon, active }) => {
+              const on = active(pathname);
+              return (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    onClick={onNavigate}
+                    aria-current={on ? "page" : undefined}
+                    className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                      on
+                        ? "bg-white/[0.12] text-white shadow-inner shadow-white/5"
+                        : "text-blue-100/70 hover:bg-white/[0.06] hover:text-white"
+                    }`}
+                  >
+                    <span
+                      aria-hidden
+                      className={`absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-[var(--mss-saffron)] transition-opacity ${on ? "opacity-100" : "opacity-0"}`}
+                    />
+                    <Icon className={`h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110 ${on ? "text-blue-300" : ""}`} />
+                    {label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+function UserCard({ user }: { user: AdminUser | null }) {
+  const [leaving, setLeaving] = useState(false);
+  const { name, initials } = initialsOf(user);
+  return (
+    <div className="flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-xs font-bold text-white ring-2 ring-white/20" aria-hidden>
+        {initials}
+      </span>
+      <span className="min-w-0 flex-1 leading-tight">
+        <span className="block truncate text-sm font-semibold text-white">{name}</span>
+        {user?.email && <span className="block truncate text-xs text-blue-200/60">{user.email}</span>}
+      </span>
+      <button
+        type="button"
+        onClick={async () => {
+          setLeaving(true);
+          await logout();
+        }}
+        disabled={leaving}
+        title="Sign out"
+        aria-label="Sign out"
+        className="cursor-pointer rounded-lg p-2 text-blue-200/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+      >
+        <LogOut className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+const SIDEBAR_BG = "bg-[radial-gradient(120%_80%_at_0%_0%,#0b3a75_0%,var(--mss-navy)_45%,var(--mss-navy-deep)_100%)]";
+
+/** Desktop sidebar (lg and up). */
+export function SidebarNav({ user }: { user: AdminUser | null }) {
   const pathname = usePathname();
   return (
-    <aside className="z-20 hidden w-20 shrink-0 flex-col items-center gap-8 border-r border-gray-200 bg-white py-6 md:flex">
-      <Link href="/" aria-label="MSS Admin home" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-500 text-xl font-extrabold text-white shadow-lg shadow-orange-500/25 transition-transform hover:scale-105">
-        M
-      </Link>
-      <nav className="flex flex-col gap-3" aria-label="Main">
-        {NAV.map(({ href, label, icon: Icon, active }) => {
-          const on = active(pathname);
-          return (
-            <Link
-              key={href}
-              href={href}
-              title={label}
-              aria-label={label}
-              aria-current={on ? "page" : undefined}
-              className={`rounded-2xl p-3 transition-all duration-200 ${on ? "scale-105 bg-orange-500 text-white shadow-md shadow-orange-500/30" : "text-gray-400 hover:bg-gray-100 hover:text-gray-900"}`}
-            >
-              <Icon className="h-5 w-5" />
-            </Link>
-          );
-        })}
-      </nav>
+    <aside className={`z-20 hidden w-64 shrink-0 flex-col gap-8 px-4 py-6 lg:flex ${SIDEBAR_BG}`}>
+      <Brand />
+      <div className="flex-1 overflow-y-auto">
+        <NavLinks pathname={pathname} />
+      </div>
+      <UserCard user={user} />
     </aside>
   );
 }
 
-export function TopHeaderNav({ user }: { user: AdminUser | null }) {
+/** Top bar with a slide-out menu, below the lg breakpoint. */
+export function MobileNav({ user }: { user: AdminUser | null }) {
   const pathname = usePathname();
-  const [leaving, setLeaving] = useState(false);
-  const name = user?.name?.trim() || user?.email?.split("@")[0] || "Admin";
-  const initials = name.split(/\s+/).map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "A";
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-gray-100 bg-white px-3 sm:h-20 sm:px-8 md:border-none md:bg-transparent">
-      <Link href="/" aria-label="MSS Admin home" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-500 text-base font-extrabold text-white shadow-sm md:hidden">
-        M
-      </Link>
-
-      <nav aria-label="Sections" className="no-scrollbar max-w-full overflow-x-auto py-1">
-        <div className="flex shrink-0 items-center gap-1 rounded-full border border-gray-100 bg-white p-1 shadow-sm sm:p-1.5">
-          {NAV.filter((n) => n.href !== "/schemes/new" && n.href !== "/schemes/upload").map(({ href, label, active }) => {
-            const on = active(pathname) || (href === "/schemes" && pathname.startsWith("/schemes"));
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-current={on ? "page" : undefined}
-                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-200 sm:px-4 sm:py-2 sm:text-sm ${on ? "bg-orange-500 text-white shadow-sm shadow-orange-500/20" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
-              >
-                {label}
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-
-      <div className="flex shrink-0 items-center gap-2 rounded-full border border-gray-100 bg-white py-1 pl-1.5 pr-2.5 shadow-sm sm:gap-3 sm:py-1.5 sm:pl-2 sm:pr-3">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-orange-200 bg-orange-100 text-xs font-bold text-orange-600 sm:h-8 sm:w-8" aria-hidden>
-          {initials}
-        </div>
-        <div className="hidden flex-col sm:flex">
-          <span className="text-sm font-semibold leading-tight text-gray-900">{name}</span>
-          {user?.email && <span className="font-mono text-xs leading-tight text-gray-500">{user.email}</span>}
-        </div>
+    <>
+      <header className={`flex h-16 shrink-0 items-center justify-between px-4 lg:hidden ${SIDEBAR_BG}`}>
+        <Brand />
         <button
           type="button"
-          onClick={async () => { setLeaving(true); await logout(); }}
-          disabled={leaving}
-          title="Sign out"
-          aria-label="Sign out"
-          className="cursor-pointer rounded-full p-1 text-gray-400 transition-colors hover:bg-rose-50 hover:text-rose-600 sm:p-1.5"
+          onClick={() => setOpen(true)}
+          aria-label="Open menu"
+          aria-expanded={open}
+          className="rounded-xl p-2 text-white transition-colors hover:bg-white/10"
         >
-          <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <Menu className="h-6 w-6" />
         </button>
-      </div>
-    </header>
+      </header>
+      {open && (
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+          <button type="button" aria-label="Close menu" className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <div className={`mss-fade-up absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col gap-8 px-4 py-6 shadow-2xl ${SIDEBAR_BG}`}>
+            <div className="flex items-center justify-between">
+              <Brand onNavigate={() => setOpen(false)} />
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close menu" className="rounded-xl p-2 text-blue-100 hover:bg-white/10">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <NavLinks pathname={pathname} onNavigate={() => setOpen(false)} />
+            </div>
+            <UserCard user={user} />
+          </div>
+        </div>
+      )}
+    </>
   );
 }

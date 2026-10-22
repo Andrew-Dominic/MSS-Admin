@@ -56,7 +56,7 @@ export function NavigationProgressBar() {
       {/* Top Progress Bar */}
       <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-transparent pointer-events-none">
         <div
-          className="h-full bg-gradient-to-r from-orange-400 via-orange-500 to-amber-500 transition-all duration-300 ease-out shadow-[0_0_12px_rgba(249,115,22,0.6)]"
+          className="h-full bg-gradient-to-r from-blue-400 via-blue-600 to-sky-500 transition-all duration-300 ease-out shadow-[0_0_12px_rgba(37,99,235,0.55)]"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -66,7 +66,7 @@ export function NavigationProgressBar() {
         role="status"
         className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2 bg-gray-900/90 text-white backdrop-blur-md rounded-full text-xs font-medium shadow-2xl border border-gray-800 animate-in fade-in slide-in-from-bottom-3 duration-200"
       >
-        <div className="w-3.5 h-3.5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+        <div className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
         <span>Loading page...</span>
       </div>
     </>

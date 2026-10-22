@@ -1,15 +1,50 @@
 import Link from "next/link";
-import { CheckCircle2, FileText, Rocket, Upload, XCircle } from "lucide-react";
+import { ArrowUpRight, Bell, CheckCircle2, Clock3, FileText, Layers, Rocket, Upload, XCircle } from "lucide-react";
 import { describeError } from "@/lib/mss/api";
 import { MSS_API_BASE } from "@/lib/mss/config";
-import { apiHealth, latestRelease, listAllDrafts } from "@/lib/mss/schemes";
-import { draftName, type Draft } from "@/lib/mss/types";
-import { Notice, PageHeader, Panel, StatusBadge, btn, formatDate } from "@/components/admin/ui";
+import { apiHealth, broadcastsSupported, latestRelease, listAllDrafts } from "@/lib/mss/schemes";
+import { COLLECTIONS, collectionForId, draftName, type Draft } from "@/lib/mss/types";
+import { Notice, StatusBadge, btn, formatDate } from "@/components/admin/ui";
+import { Bars } from "@/components/dashboard/Bars";
+import { CountUp } from "@/components/dashboard/CountUp";
 
 export const dynamic = "force-dynamic";
 
+const IST = "Asia/Kolkata";
+const dayKey = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: IST }); // YYYY-MM-DD
+
+/** Count of draft activity (creations and updates) per day for the last [days] days, oldest first. */
+function activityByDay(drafts: Draft[], days: number) {
+  const counts = new Map<string, number>();
+  for (const d of drafts) {
+    for (const iso of new Set([d.created_at, d.updated_at])) {
+      if (!iso) continue;
+      const k = dayKey(new Date(iso));
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+  }
+  const out: { label: string; value: number; title: string }[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const day = new Date(Date.now() - i * 86_400_000);
+    out.push({
+      label: day.toLocaleDateString("en-IN", { day: "numeric", timeZone: IST }),
+      title: day.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: IST }),
+      value: counts.get(dayKey(day)) ?? 0,
+    });
+  }
+  return out;
+}
+
+function Card({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  return (
+    <section className={`mss-fade-up rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 ${className}`} style={{ animationDelay: `${delay}ms` }}>
+      {children}
+    </section>
+  );
+}
+
 export default async function DashboardPage() {
-  const [health, release] = await Promise.all([apiHealth(), latestRelease().catch(() => null)]);
+  const [health, release, notifyOn] = await Promise.all([apiHealth(), latestRelease().catch(() => null), broadcastsSupported()]);
   let drafts: Draft[] = [];
   let error: string | null = null;
   try {
@@ -19,81 +54,193 @@ export default async function DashboardPage() {
   }
 
   const count = (s: string) => drafts.filter((d) => d.status === s).length;
-  const publishedSchemes = new Set(drafts.filter((d) => d.status === "published" && d.action === "upsert").map((d) => d.scheme_id)).size;
-  const recent = [...drafts].sort((a, b) => (b.updated_at ?? "").localeCompare(a.updated_at ?? "")).slice(0, 8);
+  const publishedIds = new Set(drafts.filter((d) => d.status === "published" && d.action === "upsert").map((d) => d.scheme_id));
+  const published = publishedIds.size;
+  const toReview = count("draft");
+  const approved = count("approved");
+  const recent = [...drafts].sort((a, b) => (b.updated_at ?? "").localeCompare(a.updated_at ?? "")).slice(0, 7);
+  const activity = activityByDay(drafts, 14);
+  const week = activity.slice(-7);
   const apiUp = health?.status === "ok";
 
-  const tiles = [
-    { label: "Published schemes", value: publishedSchemes, hint: "via this workflow" },
-    { label: "Drafts to review", value: count("draft"), hint: "need approval", href: "/releases" },
-    { label: "Approved, not live", value: count("approved"), hint: "ready to publish", href: "/releases" },
-    { label: "Live release", value: release?.release_version ?? "—", hint: release ? formatDate(release.published_at) : "none yet" },
-  ];
+  const byCollection = COLLECTIONS.map((c) => ({
+    ...c,
+    n: [...publishedIds].filter((id) => collectionForId(id) === c.value).length,
+  }));
+  const maxCollection = Math.max(1, ...byCollection.map((c) => c.n));
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description="MSS schemes on the MSS server. Changes reach the app after they are approved and published."
-        actions={
-          <>
-            <Link href="/schemes/upload" className={btn.secondary}><Upload className="h-4 w-4" /> Upload dataset</Link>
-            <Link href="/schemes/new" className={btn.primary}><FileText className="h-4 w-4" /> New scheme</Link>
-          </>
-        }
-      />
-
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm shadow-sm">
-        {apiUp ? <CheckCircle2 className="h-5 w-5 text-emerald-500" /> : <XCircle className="h-5 w-5 text-red-500" />}
-        <span className="font-semibold text-gray-900">MSS API {apiUp ? "online" : "unreachable"}</span>
-        <span className="text-gray-500">{MSS_API_BASE.replace("https://", "")}</span>
-        {health && <span className="text-gray-500">· database {health.db} · v{health.version}</span>}
+      {/* Header */}
+      <div className="mss-fade-up flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-blue-700">MSME Schemes Search</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-500">Changes reach the app after they are approved and published.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/schemes/upload" className={btn.secondary}>
+            <Upload className="h-4 w-4" /> Upload dataset
+          </Link>
+          <Link href="/schemes/new" className={`${btn.primary} rounded-full bg-[var(--mss-navy)] hover:bg-blue-800`}>
+            <FileText className="h-4 w-4" /> New scheme
+          </Link>
+        </div>
       </div>
 
       {error && <Notice tone="error">Could not load drafts: {error}</Notice>}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {tiles.map((t) => {
-          const body = (
-            <>
-              <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">{t.label}</div>
-              <div className="mt-1 text-3xl font-bold text-gray-900">{t.value}</div>
-              <div className="text-xs text-gray-400">{t.hint}</div>
-            </>
-          );
-          return t.href ? (
-            <Link key={t.label} href={t.href} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-orange-300">{body}</Link>
-          ) : (
-            <div key={t.label} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">{body}</div>
-          );
-        })}
+      {/* Stat cards */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="mss-fade-up relative overflow-hidden rounded-3xl bg-[radial-gradient(120%_120%_at_0%_0%,#0b3a75_0%,var(--mss-navy)_55%,var(--mss-navy-deep)_100%)] p-5 text-white shadow-lg shadow-blue-950/20">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-blue-100/70">Published schemes</p>
+              <p className="mt-1 text-4xl font-semibold tracking-tight"><CountUp value={published} /></p>
+              <p className="mt-1 text-xs text-blue-100/60">via the review workflow</p>
+            </div>
+            <div className="w-24 shrink-0">
+              <Bars data={week} height={56} tone="dark" showLabels={false} />
+            </div>
+          </div>
+          <div aria-hidden className="mss-float pointer-events-none absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-blue-500/20 blur-2xl" />
+        </section>
+
+        <Link href="/releases" className="mss-fade-up group rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-md" style={{ animationDelay: "60ms" }}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-slate-500">Drafts to review</p>
+            <Clock3 className="h-4 w-4 text-amber-500" />
+          </div>
+          <p className="mt-1 text-4xl font-semibold tracking-tight text-slate-900"><CountUp value={toReview} /></p>
+          <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">need approval <ArrowUpRight className="h-3 w-3 opacity-0 transition group-hover:opacity-100" /></p>
+        </Link>
+
+        <Link href="/releases" className="mss-fade-up group rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-md" style={{ animationDelay: "120ms" }}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-slate-500">Approved, not live</p>
+            <CheckCircle2 className="h-4 w-4 text-blue-600" />
+          </div>
+          <p className="mt-1 text-4xl font-semibold tracking-tight text-slate-900"><CountUp value={approved} /></p>
+          <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">ready to publish <ArrowUpRight className="h-3 w-3 opacity-0 transition group-hover:opacity-100" /></p>
+        </Link>
+
+        <Card delay={180}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-slate-500">Live release</p>
+            <Rocket className="h-4 w-4 text-[var(--mss-green)]" />
+          </div>
+          <p
+            title={release?.release_version}
+            className={`mt-1 truncate font-semibold tracking-tight text-slate-900 ${(release?.release_version.length ?? 0) > 6 ? "text-2xl leading-10" : "text-4xl"}`}
+          >
+            {release?.release_version ?? "—"}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">{release ? formatDate(release.published_at) : "none yet"}</p>
+        </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <Panel title="Recent changes" actions={<Link href="/schemes" className="text-sm font-semibold text-orange-600 hover:underline">All schemes</Link>}>
+      {/* Activity + breakdown */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <Card delay={220}>
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">Catalogue activity</h2>
+              <p className="text-xs text-slate-500">Drafts created or updated per day</p>
+            </div>
+            <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white">14 days</span>
+          </div>
+          <Bars data={activity} height={180} />
+        </Card>
+
+        <section className="mss-fade-up rounded-3xl bg-gradient-to-br from-blue-50 to-sky-100/60 p-5 ring-1 ring-blue-100" style={{ animationDelay: "260ms" }}>
+          <div className="flex items-center gap-2 text-blue-900">
+            <Layers className="h-4 w-4" />
+            <h2 className="text-base font-semibold">By collection</h2>
+          </div>
+          <p className="mt-3 text-5xl font-semibold tracking-tight text-[var(--mss-navy)]">
+            <CountUp value={published} />
+            <span className="ml-2 text-base font-medium text-blue-700/70">live</span>
+          </p>
+          <ul className="mt-5 space-y-4">
+            {byCollection.map((c, i) => (
+              <li key={c.value}>
+                <div className="mb-1.5 flex justify-between text-sm">
+                  <span className="font-medium text-slate-700">{c.label}</span>
+                  <span className="font-semibold text-slate-900">{c.n}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-white">
+                  <div
+                    className="mss-grow-x h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-700"
+                    style={{ width: `${(c.n / maxCollection) * 100}%`, animationDelay: `${300 + i * 80}ms` }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      {/* Recent + system */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <Card delay={300} className="overflow-hidden p-0">
+          <div className="flex items-center justify-between px-5 pt-5">
+            <h2 className="text-base font-semibold text-slate-900">Recent changes</h2>
+            <Link href="/schemes" className="text-sm font-semibold text-blue-700 hover:underline">All schemes</Link>
+          </div>
           {recent.length === 0 ? (
-            <p className="text-sm text-gray-500">No drafts yet. Start by uploading the 2026 datasets.</p>
+            <p className="px-5 py-6 text-sm text-slate-500">No drafts yet. Start by uploading the 2026 datasets.</p>
           ) : (
-            <ul className="divide-y divide-gray-100">
-              {recent.map((d) => (
-                <li key={d.id} className="flex items-center justify-between gap-3 py-2.5">
-                  <Link href={`/schemes/${d.id}`} className="min-w-0">
-                    <span className="block truncate text-sm font-medium text-gray-900 hover:text-orange-600">{draftName(d)}</span>
-                    <span className="font-mono text-xs text-gray-400">{d.scheme_id} · {formatDate(d.updated_at)}</span>
-                  </Link>
-                  <StatusBadge status={d.status} action={d.action} />
-                </li>
-              ))}
-            </ul>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[560px] text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-slate-400">
+                    <th className="px-5 py-2 font-medium">Scheme</th>
+                    <th className="px-3 py-2 font-medium">Collection</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                    <th className="px-5 py-2 text-right font-medium">Updated</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {recent.map((d) => (
+                    <tr key={d.id} className="transition-colors hover:bg-blue-50/40">
+                      <td className="max-w-[280px] px-5 py-3">
+                        <Link href={`/schemes/${d.id}`} className="block truncate font-medium text-slate-900 hover:text-blue-700">{draftName(d)}</Link>
+                        <span className="font-mono text-xs text-slate-400">{d.scheme_id}</span>
+                      </td>
+                      <td className="px-3 py-3 text-slate-600">{COLLECTIONS.find((c) => c.value === collectionForId(d.scheme_id))?.label ?? "—"}</td>
+                      <td className="px-3 py-3"><StatusBadge status={d.status} action={d.action} /></td>
+                      <td className="whitespace-nowrap px-5 py-3 text-right text-xs text-slate-500">{formatDate(d.updated_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </Panel>
-        <Panel title="How publishing works">
-          <ol className="space-y-3 text-sm text-gray-600">
-            <li><span className="font-semibold text-gray-900">1. Draft</span> — create or edit a scheme, or upload a dataset.</li>
-            <li><span className="font-semibold text-gray-900">2. Approve</span> — review each draft and approve it with a note.</li>
-            <li><span className="font-semibold text-gray-900">3. Publish</span> — publish approved drafts as a new release. <Link href="/releases" className="font-semibold text-orange-600 hover:underline"><Rocket className="inline h-3.5 w-3.5" /> Releases</Link></li>
-          </ol>
-        </Panel>
+        </Card>
+
+        <section className="mss-fade-up flex flex-col gap-4 rounded-3xl bg-[var(--mss-navy-deep)] p-5 text-white shadow-lg shadow-blue-950/20" style={{ animationDelay: "340ms" }}>
+          <h2 className="text-base font-semibold">System</h2>
+          <div className="flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10">
+            {apiUp ? <CheckCircle2 className="h-5 w-5 text-emerald-400" /> : <XCircle className="h-5 w-5 text-red-400" />}
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">MSS API {apiUp ? "online" : "unreachable"}</p>
+              <p className="truncate text-xs text-blue-100/60">
+                {MSS_API_BASE.replace("https://", "")}
+                {health && ` · db ${health.db} · v${health.version}`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10">
+            <Bell className={`h-5 w-5 ${notifyOn ? "text-emerald-400" : "text-amber-400"}`} />
+            <div>
+              <p className="text-sm font-semibold">Notifications {notifyOn ? "ready" : "unavailable"}</p>
+              <p className="text-xs text-blue-100/60">{notifyOn ? "Broadcasts and Notify users on publish" : "Server update needed for broadcasts"}</p>
+            </div>
+          </div>
+          <Link href="/notifications" className="mt-auto inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--mss-navy)] transition hover:bg-blue-50">
+            <Bell className="h-4 w-4" /> Send a notification
+          </Link>
+        </section>
       </div>
     </div>
   );

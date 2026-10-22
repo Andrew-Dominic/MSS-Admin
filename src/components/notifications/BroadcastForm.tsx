@@ -113,11 +113,11 @@ export function BroadcastForm({ initialBroadcastId, supported }: { initialBroadc
             <legend className="text-sm font-medium text-gray-700">Audience</legend>
             <div className="flex flex-wrap gap-4 text-sm">
               <label className="flex items-center gap-2">
-                <input type="radio" name="audience" className="accent-orange-500" checked={everyone} onChange={() => edited(setEveryone)(true)} />
+                <input type="radio" name="audience" className="accent-blue-600" checked={everyone} onChange={() => edited(setEveryone)(true)} />
                 Everyone
               </label>
               <label className="flex items-center gap-2">
-                <input type="radio" name="audience" className="accent-orange-500" checked={!everyone} onChange={() => edited(setEveryone)(false)} />
+                <input type="radio" name="audience" className="accent-blue-600" checked={!everyone} onChange={() => edited(setEveryone)(false)} />
                 Only some states and/or languages
               </label>
             </div>
@@ -130,14 +130,14 @@ export function BroadcastForm({ initialBroadcastId, supported }: { initialBroadc
                     <div className="flex items-center gap-2">
                       <input className={`${field} h-9 w-48`} placeholder="Filter states" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} aria-label="Filter states" />
                       {states.size > 0 && (
-                        <button type="button" className="text-xs font-semibold text-orange-600" onClick={() => edited(setStates)(new Set())}>Clear</button>
+                        <button type="button" className="text-xs font-semibold text-blue-700" onClick={() => edited(setStates)(new Set())}>Clear</button>
                       )}
                     </div>
                   </div>
                   <div className="grid max-h-56 grid-cols-1 gap-1 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
                     {shownStates.map((s) => (
                       <label key={s.code} className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm hover:bg-white">
-                        <input type="checkbox" className="accent-orange-500" checked={states.has(s.code)} onChange={() => toggle(states, s.code, edited(setStates))} />
+                        <input type="checkbox" className="accent-blue-600" checked={states.has(s.code)} onChange={() => toggle(states, s.code, edited(setStates))} />
                         {s.name}
                       </label>
                     ))}
@@ -148,7 +148,7 @@ export function BroadcastForm({ initialBroadcastId, supported }: { initialBroadc
                   <div className="flex flex-wrap gap-4">
                     {BROADCAST_LANGUAGES.map((l) => (
                       <label key={l.value} className="flex items-center gap-2 text-sm">
-                        <input type="checkbox" className="accent-orange-500" checked={languages.has(l.value)} onChange={() => toggle(languages, l.value, edited(setLanguages))} />
+                        <input type="checkbox" className="accent-blue-600" checked={languages.has(l.value)} onChange={() => toggle(languages, l.value, edited(setLanguages))} />
                         {l.label}
                       </label>
                     ))}

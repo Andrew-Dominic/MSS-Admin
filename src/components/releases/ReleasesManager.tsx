@@ -138,7 +138,7 @@ export function ReleasesManager({ drafts, notifySupported }: { drafts: OpenDraft
             <label className={`flex items-center gap-2 text-sm ${notifySupported ? "text-gray-700" : "text-gray-400"}`}>
               <input
                 type="checkbox"
-                className="h-4 w-4 accent-orange-500"
+                className="h-4 w-4 accent-blue-600"
                 checked={notify}
                 disabled={!notifySupported}
                 onChange={(e) => {
@@ -196,7 +196,7 @@ export function ReleasesManager({ drafts, notifySupported }: { drafts: OpenDraft
             {progress && (
               <div className="mt-4 space-y-2">
                 <div className="h-2 overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.done}>
-                  <div className="h-full bg-orange-500 transition-all" style={{ width: `${(progress.done / progress.total) * 100}%` }} />
+                  <div className="h-full bg-blue-600 transition-all" style={{ width: `${(progress.done / progress.total) * 100}%` }} />
                 </div>
                 <p className="text-xs text-gray-500">
                   {progress.done} of {progress.total} approved{running ? ` · about ${Math.ceil(((progress.total - progress.done) * APPROVE_GAP_MS) / 60000)} min left (the server allows 20 per minute)` : ""}
@@ -218,18 +218,18 @@ function DraftList({ drafts, selected, onToggle, onAll }: { drafts: OpenDraft[];
   return (
     <div className="max-h-[420px] overflow-y-auto rounded-xl border border-gray-100">
       <label className="sticky top-0 flex items-center gap-3 border-b border-gray-100 bg-gray-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-        <input type="checkbox" checked={all} onChange={(e) => onAll(e.target.checked)} className="h-4 w-4 accent-orange-500" />
+        <input type="checkbox" checked={all} onChange={(e) => onAll(e.target.checked)} className="h-4 w-4 accent-blue-600" />
         Select all
       </label>
       {drafts.map((d) => (
-        <label key={d.id} className="flex items-center gap-3 border-b border-gray-50 px-4 py-2.5 text-sm last:border-0 hover:bg-orange-50/30">
-          <input type="checkbox" checked={selected.has(d.id)} onChange={() => onToggle(d.id)} className="h-4 w-4 accent-orange-500" />
+        <label key={d.id} className="flex items-center gap-3 border-b border-gray-50 px-4 py-2.5 text-sm last:border-0 hover:bg-blue-50/30">
+          <input type="checkbox" checked={selected.has(d.id)} onChange={() => onToggle(d.id)} className="h-4 w-4 accent-blue-600" />
           <span className="min-w-0 flex-1">
             <span className="block truncate font-medium text-gray-900">{d.name}</span>
             <span className="font-mono text-xs text-gray-400">{d.schemeId} · v{d.version}</span>
           </span>
           <StatusBadge status={d.status} action={d.action} />
-          <Link href={`/schemes/${d.id}`} className="text-xs font-semibold text-orange-600 hover:underline" onClick={(e) => e.stopPropagation()}>Review</Link>
+          <Link href={`/schemes/${d.id}`} className="text-xs font-semibold text-blue-700 hover:underline" onClick={(e) => e.stopPropagation()}>Review</Link>
         </label>
       ))}
     </div>

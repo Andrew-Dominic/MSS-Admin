@@ -118,9 +118,9 @@ export function SchemesTable({ rows }: { rows: SchemeRow[] }) {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {visible.map((r) => (
-              <tr key={r.draftId} className="hover:bg-orange-50/30">
+              <tr key={r.draftId} className="hover:bg-blue-50/30">
                 <td className="px-4 py-3">
-                  <Link href={`/schemes/${r.draftId}`} className="font-semibold text-gray-900 hover:text-orange-600">{r.name}</Link>
+                  <Link href={`/schemes/${r.draftId}`} className="font-semibold text-gray-900 hover:text-blue-700">{r.name}</Link>
                   <div className="font-mono text-xs text-gray-400">{r.schemeId} · v{r.version}</div>
                 </td>
                 <td className="px-4 py-3 text-gray-600">

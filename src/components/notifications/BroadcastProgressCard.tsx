@@ -59,7 +59,7 @@ export function BroadcastProgressCard({ broadcastId }: { broadcastId: string }) 
             </span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
-            <div className="h-full rounded-full bg-orange-500 transition-all" style={{ width: `${pct}%` }} />
+            <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${pct}%` }} />
           </div>
           <p className="text-xs text-gray-500">
             Counts inbox entries created. Phone notifications follow for users with a registered device and notifications turned on.

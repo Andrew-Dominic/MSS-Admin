@@ -92,8 +92,8 @@ export function DatasetUpload() {
       {message && <Notice tone={message.tone}>{message.text}{message.tone === "success" && <> <Link className="font-semibold underline" href="/schemes">Open schemes</Link></>}</Notice>}
 
       <Panel title="1. Choose a file">
-        <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center hover:border-orange-300 hover:bg-orange-50/30">
-          <FileJson className="h-8 w-8 text-orange-500" />
+        <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center hover:border-blue-300 hover:bg-blue-50/30">
+          <FileJson className="h-8 w-8 text-blue-600" />
           <span className="text-sm font-semibold text-gray-800">{fileName ?? "Select a .json dataset file"}</span>
           <span className="text-xs text-gray-500">A source file such as central_schemes_master_2026.json, or an upload envelope. Up to 2000 schemes and 3.9 MB.</span>
           <input type="file" accept="application/json,.json" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} />

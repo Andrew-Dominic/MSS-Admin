@@ -198,7 +198,7 @@ export function SchemeEditor({
               if (t === "json") openJson();
               else if (applyJson()) setTab("form");
             }}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold ${tab === t ? "border-orange-500 text-orange-600" : "border-transparent text-gray-500 hover:text-gray-800"}`}
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold ${tab === t ? "border-blue-600 text-blue-700" : "border-transparent text-gray-500 hover:text-gray-800"}`}
           >
             {t === "form" ? "Form" : "Advanced JSON"}
           </button>
@@ -276,7 +276,7 @@ export function SchemeEditor({
               <div className="flex gap-1 rounded-xl bg-gray-100 p-1" role="tablist" aria-label="Content language">
                 {LANGS.map((l) => (
                   <button key={l.code} type="button" role="tab" aria-selected={lang === l.code} onClick={() => setLang(l.code)}
-                    className={`rounded-lg px-3 py-1 text-xs font-semibold ${lang === l.code ? "bg-white text-orange-600 shadow-sm" : "text-gray-500"}`}>
+                    className={`rounded-lg px-3 py-1 text-xs font-semibold ${lang === l.code ? "bg-white text-blue-700 shadow-sm" : "text-gray-500"}`}>
                     {l.label}
                   </button>
                 ))}

@@ -13,7 +13,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export default async function SchemeDraftPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const back = (
-    <Link href="/schemes" className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-orange-600">
+    <Link href="/schemes" className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-blue-700">
       <ArrowLeft className="h-4 w-4" /> Schemes
     </Link>
   );
