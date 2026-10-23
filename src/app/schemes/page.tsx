@@ -2,9 +2,11 @@ import Link from "next/link";
 import { Plus, Upload } from "lucide-react";
 import { describeError } from "@/lib/mss/api";
 import { listAllDrafts } from "@/lib/mss/schemes";
+import { catalogSummary } from "@/lib/mss/catalog";
 import { draftName, type Draft } from "@/lib/mss/types";
 import { Notice, PageHeader, btn } from "@/components/admin/ui";
 import { SchemesTable, type SchemeRow } from "@/components/schemes/SchemesTable";
+import { CatalogTable, type CatalogRow } from "@/components/schemes/CatalogTable";
 
 export const dynamic = "force-dynamic";
 
@@ -35,20 +37,63 @@ function latestPerScheme(drafts: Draft[]): SchemeRow[] {
   return rows.sort((a, b) => a.schemeId.localeCompare(b.schemeId));
 }
 
-export default async function SchemesPage() {
-  let rows: SchemeRow[] = [];
+export default async function SchemesPage({ searchParams }: { searchParams: Promise<{ view?: string | string[] }> }) {
+  const { view: v } = await searchParams;
+  const view = v === "drafts" ? "drafts" : "live";
+  let drafts: Draft[] = [];
   let error: string | null = null;
   try {
-    rows = latestPerScheme(await listAllDrafts());
+    drafts = await listAllDrafts();
   } catch (e) {
     error = describeError(e);
   }
+  const rows: SchemeRow[] = latestPerScheme(drafts);
+
+  let catalog: CatalogRow[] | null = null;
+  let release: string | null = null;
+  if (view === "live") {
+    const summary = await catalogSummary();
+    if (summary) {
+      release = summary.release.release_version;
+      const open = new Map<string, Draft>();
+      for (const d of drafts) if (d.status === "draft" || d.status === "approved") open.set(d.scheme_id, d);
+      // Only light fields go to the browser, not the full source records.
+      catalog = summary.items.map((s) => {
+        const d = open.get(s.id);
+        return {
+          id: s.id,
+          name: s.name,
+          nameHi: s.nameHi,
+          nameTa: s.nameTa,
+          collection: s.collection,
+          status: s.status,
+          level: s.level,
+          state: s.state,
+          openDraft: d ? { id: d.id, status: d.status } : undefined,
+        };
+      });
+    }
+  }
+
+  const tab = (href: string, label: string, on: boolean, count?: number) => (
+    <Link
+      href={href}
+      aria-current={on ? "page" : undefined}
+      className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${on ? "bg-white text-blue-700 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+    >
+      {label}{count != null ? ` (${count})` : ""}
+    </Link>
+  );
 
   return (
     <div className="mx-auto max-w-7xl">
       <PageHeader
         title="Schemes"
-        description="Every scheme that has gone through the draft → approve → publish workflow on the MSS server."
+        description={
+          view === "live"
+            ? `Every scheme live in the MSS app${release ? ` (release ${release})` : ""}. Edit one to create a draft, then approve, publish and notify users.`
+            : "Every scheme that has gone through the draft → approve → publish workflow on the MSS server."
+        }
         actions={
           <>
             <Link href="/schemes/upload" className={btn.secondary}>
@@ -60,7 +105,24 @@ export default async function SchemesPage() {
           </>
         }
       />
-      {error ? <Notice tone="error">Could not load schemes: {error}</Notice> : <SchemesTable rows={rows} />}
+      <nav aria-label="Scheme views" className="mss-fade-up mb-4 inline-flex gap-1 rounded-full bg-slate-100 p-1">
+        {tab("/schemes", "Live in app", view === "live", catalog?.length)}
+        {tab("/schemes?view=drafts", "Drafts & history", view === "drafts", error ? undefined : rows.length)}
+      </nav>
+      {view === "live" ? (
+        catalog ? (
+          <div className="space-y-4">
+            {error && <Notice tone="warn">Open drafts could not be loaded: {error}</Notice>}
+            <CatalogTable rows={catalog} />
+          </div>
+        ) : (
+          <Notice tone="error">The live catalogue could not be loaded from the MSS API. Try again in a minute, or use the drafts view.</Notice>
+        )
+      ) : error ? (
+        <Notice tone="error">Could not load schemes: {error}</Notice>
+      ) : (
+        <SchemesTable rows={rows} />
+      )}
     </div>
   );
 }

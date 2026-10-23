@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Bell, FileText, LayoutDashboard, LogOut, Menu, PlusCircle, Rocket, Upload, X, type LucideIcon } from "lucide-react";
+import { Activity, Bell, FileText, LayoutDashboard, LogOut, Menu, PlusCircle, Rocket, Upload, Users, X, type LucideIcon } from "lucide-react";
 import { logout } from "@/app/login/actions";
 
 export interface AdminUser {
@@ -43,7 +43,10 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
   },
   {
     title: "Engage",
-    items: [{ href: "/notifications", label: "Notifications", icon: Bell, active: (p) => p.startsWith("/notifications") }],
+    items: [
+      { href: "/users", label: "Users", icon: Users, active: (p) => p.startsWith("/users") },
+      { href: "/notifications", label: "Notifications", icon: Bell, active: (p) => p.startsWith("/notifications") },
+    ],
   },
 ];
 

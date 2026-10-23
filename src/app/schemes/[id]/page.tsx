@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { describeError, MssApiError } from "@/lib/mss/api";
-import { getDraft } from "@/lib/mss/schemes";
+import { broadcastsSupported, getDraft } from "@/lib/mss/schemes";
+import { catalogScheme } from "@/lib/mss/catalog";
+import { changedFields, defaultNotification } from "@/lib/mss/changes";
 import { draftName, type SchemeRecord } from "@/lib/mss/types";
 import { Notice, PageHeader } from "@/components/admin/ui";
 import { EMPTY_SCHEME, SchemeEditor } from "@/components/schemes/SchemeEditor";
+import { PublishPanel } from "@/components/schemes/PublishPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -40,10 +43,32 @@ export default async function SchemeDraftPage({ params }: { params: Promise<{ id
 
   const { draft } = result;
   const raw: SchemeRecord = draft.payload?.raw ?? { ...EMPTY_SCHEME, id: draft.scheme_id };
+  const isUpsert = draft.action === "upsert";
+  const isOpen = isUpsert && (draft.status === "draft" || draft.status === "approved");
+  // Change summary + default notification, against the scheme as it is live in the app.
+  const [live, supported] = isOpen
+    ? await Promise.all([catalogScheme(draft.scheme_id).catch(() => null), broadcastsSupported()])
+    : [null, false];
+  const changes = live?.source ? changedFields(live.source, raw) : null;
+  const collection = draft.payload?.collection ?? live?.collection ?? null;
+  const defaults = defaultNotification(raw.name?.en || draftName(draft), changes, collection);
   return (
     <div className="mx-auto max-w-5xl">
       {back}
       <PageHeader title={draftName(draft)} description={draft.scheme_id} />
+      {isUpsert && (
+        <div className="mb-5">
+          <PublishPanel
+            draftId={draft.id}
+            version={draft.version}
+            status={draft.status}
+            isOpen={isOpen}
+            notifySupported={supported}
+            changes={changes}
+            defaults={defaults}
+          />
+        </div>
+      )}
       <SchemeEditor
         initial={raw}
         initialCollection={draft.payload?.collection ?? null}

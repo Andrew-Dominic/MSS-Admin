@@ -78,11 +78,14 @@ export function SchemeEditor({
   initial,
   initialCollection,
   draft,
+  lockIdentity = false,
 }: {
   initial: SchemeRecord;
   initialCollection: Collection | null;
   /** The draft being edited; absent for a brand-new scheme. */
   draft?: EditorDraft;
+  /** Editing a live catalogue scheme: id and collection stay fixed. */
+  lockIdentity?: boolean;
 }) {
   const router = useRouter();
   const [record, setRecord] = useState<SchemeRecord>(initial);
@@ -99,7 +102,7 @@ export function SchemeEditor({
   const isOpen = !draft || ((draft.status === "draft" || draft.status === "approved") && draft.action === "upsert");
   // A published/discarded revision is read-only; saving creates a new draft from it.
   const createsNewDraft = !draft || !isOpen;
-  const isNew = !draft;
+  const isNew = !draft && !lockIdentity;
 
   const set = (path: (string | number)[], value: unknown) => setRecord((r) => setIn(r, path, value));
   const text = (path: (string | number)[]) => String(getIn(record, path) ?? "");
@@ -325,7 +328,7 @@ export function SchemeEditor({
       <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center gap-2 border-t border-gray-200 bg-[#F4F7F9]/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border">
         {(isOpen || draft?.action === "upsert") && (
           <button type="button" className={btn.primary} disabled={pending} onClick={save}>
-            {pending ? "Saving…" : createsNewDraft ? (isNew ? "Create draft" : "Save as new draft") : "Save draft"}
+            {pending ? "Saving…" : createsNewDraft ? (isNew ? "Create draft" : lockIdentity ? "Save changes as draft" : "Save as new draft") : "Save draft"}
           </button>
         )}
         {draft && isOpen && (

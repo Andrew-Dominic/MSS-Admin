@@ -1,7 +1,7 @@
 import "server-only";
 import { gunzipSync } from "node:zlib";
 import { apiUrl } from "./config";
-import { collectionForId, type Collection } from "./types";
+import { collectionForId, type Collection, type SchemeRecord } from "./types";
 
 /** GET /v1/catalog/current: the published app catalogue (public). */
 export interface CatalogCurrent {
@@ -14,6 +14,20 @@ export interface CatalogCurrent {
   bundle_url: string;
 }
 
+/** One scheme as the app has it, plus its original (editable) source record. */
+export interface CatalogScheme {
+  id: string;
+  name: string;
+  nameHi?: string;
+  nameTa?: string;
+  collection: Collection | null;
+  status: string;
+  level?: string;
+  state?: string;
+  category?: string;
+  source: SchemeRecord | null;
+}
+
 export interface CatalogSummary {
   release: CatalogCurrent;
   schemes: number;
@@ -23,6 +37,8 @@ export interface CatalogSummary {
   localized: { hi: number; ta: number };
   /** Non-scheme catalogues (authorities, institutions, ...) and their sizes. */
   others: { name: string; count: number }[];
+  /** Every scheme in the live catalogue, sorted by id. */
+  items: CatalogScheme[];
 }
 
 let cache: { tag: string; summary: CatalogSummary } | null = null;
@@ -56,6 +72,7 @@ export async function catalogSummary(): Promise<CatalogSummary | null> {
   const byCollection: Record<Collection, number> = { central: 0, tamil_nadu: 0, maharashtra: 0 };
   const byStatus: Record<string, number> = {};
   const localized = { hi: 0, ta: 0 };
+  const list: CatalogScheme[] = [];
   let schemes = release.record_counts["scheme_catalog.json"] ?? 0;
 
   try {
@@ -66,8 +83,9 @@ export async function catalogSummary(): Promise<CatalogSummary | null> {
       const bundle = JSON.parse(text) as Record<string, { data?: unknown[] } | unknown[]>;
       const sc = bundle["scheme_catalog.json"];
       const items = (Array.isArray(sc) ? sc : sc?.data ?? []) as {
-        identity?: { id?: string; status?: string };
+        identity?: { id?: string; status?: string; name?: string };
         localization?: Record<string, { name?: string }>;
+        source?: SchemeRecord;
       }[];
       schemes = items.length;
       for (const s of items) {
@@ -77,6 +95,20 @@ export async function catalogSummary(): Promise<CatalogSummary | null> {
         byStatus[st] = (byStatus[st] ?? 0) + 1;
         if (s.localization?.hi?.name) localized.hi++;
         if (s.localization?.ta?.name) localized.ta++;
+        const id = s.identity?.id ?? "";
+        const src = s.source ?? null;
+        list.push({
+          id,
+          name: s.identity?.name || (src?.name?.en ?? "") || id,
+          nameHi: s.localization?.hi?.name,
+          nameTa: s.localization?.ta?.name,
+          collection: c,
+          status: st,
+          level: src?.level,
+          state: src?.state,
+          category: typeof src?.category === "string" ? src.category : undefined,
+          source: src,
+        });
       }
     }
   } catch {
@@ -88,7 +120,14 @@ export async function catalogSummary(): Promise<CatalogSummary | null> {
     .map(([f, count]) => ({ name: label(f), count }))
     .sort((a, b) => b.count - a.count);
 
-  const summary: CatalogSummary = { release, schemes, byCollection, byStatus, localized, others };
+  list.sort((a, b) => a.id.localeCompare(b.id));
+  const summary: CatalogSummary = { release, schemes, byCollection, byStatus, localized, others, items: list };
   cache = { tag: release.release_version, summary };
   return summary;
+}
+
+/** One live scheme by id (for editing and change summaries). */
+export async function catalogScheme(id: string): Promise<CatalogScheme | null> {
+  const summary = await catalogSummary();
+  return summary?.items.find((s) => s.id === id) ?? null;
 }

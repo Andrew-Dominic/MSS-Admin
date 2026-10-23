@@ -11,8 +11,8 @@ const TYPES = [
   { value: "profile", label: "Profile" },
 ];
 
-export function NotifyUserForm() {
-  const [userId, setUserId] = useState("");
+export function NotifyUserForm({ initialUserId = "" }: { initialUserId?: string }) {
+  const [userId, setUserId] = useState(initialUserId);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [type, setType] = useState("updates");
@@ -32,7 +32,7 @@ export function NotifyUserForm() {
   }
 
   return (
-    <Panel title="Send to one user">
+    <Panel title={initialUserId ? "Send to this user" : "Send to one user"}>
       <form onSubmit={send} className="space-y-4">
         {result && <Notice tone={result.tone}>{result.text}</Notice>}
         <div className="grid gap-4 md:grid-cols-[2fr_1fr]">

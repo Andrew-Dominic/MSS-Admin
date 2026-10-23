@@ -8,18 +8,28 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export default async function NotificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ broadcast?: string | string[] }>;
+  searchParams: Promise<{ broadcast?: string | string[]; user?: string | string[] }>;
 }) {
-  const [{ broadcast }, supported] = await Promise.all([searchParams, broadcastsSupported()]);
+  const [{ broadcast, user }, supported] = await Promise.all([searchParams, broadcastsSupported()]);
   const id = typeof broadcast === "string" && UUID.test(broadcast) ? broadcast : undefined;
+  const userId = typeof user === "string" && UUID.test(user) ? user : undefined;
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <PageHeader
         title="Notifications"
         description="Send messages to users' in-app inbox and phones. Publishing schemes with “Notify users” sends a New schemes notification automatically."
       />
-      <BroadcastForm initialBroadcastId={id} supported={supported} />
-      <NotifyUserForm />
+      {userId ? (
+        <>
+          <NotifyUserForm initialUserId={userId} />
+          <BroadcastForm initialBroadcastId={id} supported={supported} />
+        </>
+      ) : (
+        <>
+          <BroadcastForm initialBroadcastId={id} supported={supported} />
+          <NotifyUserForm />
+        </>
+      )}
     </div>
   );
 }
