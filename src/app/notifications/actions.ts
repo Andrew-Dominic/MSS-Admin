@@ -1,5 +1,6 @@
 "use server";
 
+import { isViewOnly, VIEW_ONLY_ERROR } from "@/lib/mss/role";
 import { describeError } from "@/lib/mss/api";
 import { getBroadcast, sendBroadcast, sendNotification } from "@/lib/mss/schemes";
 import {
@@ -29,6 +30,7 @@ export async function notifyUser(input: {
   message: string;
   type: string;
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  if (await isViewOnly()) return { ok: false, error: VIEW_ONLY_ERROR };
   const userId = input.userId.trim();
   const title = input.title.trim();
   const message = input.message.trim();
@@ -56,6 +58,7 @@ export async function broadcastNotification(input: {
   languages: string[];
   campaignKey: string;
 }): Promise<Result<BroadcastReceipt>> {
+  if (await isViewOnly()) return { ok: false, error: VIEW_ONLY_ERROR };
   const title = input.title.trim();
   const message = input.message.trim();
   const bad = checkText(title, message);

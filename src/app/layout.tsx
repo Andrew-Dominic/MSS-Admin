@@ -7,7 +7,7 @@ import { NavigationProgressBar } from "@/components/NavigationProgressBar";
 import { AdminLayoutShell } from "@/components/AdminLayoutShell";
 import type { AdminUser } from "@/components/AppNavigation";
 import { mssApi } from "@/lib/mss/api";
-import { ACCESS_COOKIE } from "@/lib/mss/session";
+import { ACCESS_COOKIE, ROLE_COOKIE } from "@/lib/mss/session";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,10 +18,12 @@ export const metadata: Metadata = {
 };
 
 async function currentUser(): Promise<AdminUser | null> {
-  if (!(await cookies()).get(ACCESS_COOKIE)) return null;
+  const store = await cookies();
+  if (!store.get(ACCESS_COOKIE)) return null;
+  const viewOnly = store.get(ROLE_COOKIE)?.value === "viewer";
   try {
     const { data } = await mssApi<{ user?: { name?: string | null; email?: string | null } }>("/me");
-    return { name: data?.user?.name ?? null, email: data?.user?.email ?? null };
+    return { name: data?.user?.name ?? null, email: data?.user?.email ?? null, viewOnly };
   } catch {
     return null;
   }

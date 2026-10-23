@@ -10,6 +10,8 @@ import { logout } from "@/app/login/actions";
 export interface AdminUser {
   name: string | null;
   email: string | null;
+  /** View-only admin: may look at everything, cannot change anything. */
+  viewOnly?: boolean;
 }
 
 interface NavItem {
@@ -17,6 +19,8 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   active: (path: string) => boolean;
+  /** Only for accounts that can make changes. */
+  write?: boolean;
 }
 
 const SECTIONS: { title: string; items: NavItem[] }[] = [
@@ -36,8 +40,8 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
         icon: FileText,
         active: (p) => p.startsWith("/schemes") && p !== "/schemes/new" && p !== "/schemes/upload",
       },
-      { href: "/schemes/new", label: "New scheme", icon: PlusCircle, active: (p) => p === "/schemes/new" },
-      { href: "/schemes/upload", label: "Upload dataset", icon: Upload, active: (p) => p === "/schemes/upload" },
+      { href: "/schemes/new", label: "New scheme", icon: PlusCircle, active: (p) => p === "/schemes/new", write: true },
+      { href: "/schemes/upload", label: "Upload dataset", icon: Upload, active: (p) => p === "/schemes/upload", write: true },
       { href: "/releases", label: "Releases", icon: Rocket, active: (p) => p.startsWith("/releases") },
     ],
   },
@@ -70,14 +74,14 @@ function Brand({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function NavLinks({ pathname, onNavigate, viewOnly }: { pathname: string; onNavigate?: () => void; viewOnly?: boolean }) {
   return (
     <nav aria-label="Main" className="space-y-6">
       {SECTIONS.map((section) => (
         <div key={section.title}>
           <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-blue-200/50">{section.title}</p>
           <ul className="space-y-1">
-            {section.items.map(({ href, label, icon: Icon, active }) => {
+            {section.items.filter((item) => !(viewOnly && item.write)).map(({ href, label, icon: Icon, active }) => {
               const on = active(pathname);
               return (
                 <li key={href}>
@@ -119,6 +123,11 @@ function UserCard({ user }: { user: AdminUser | null }) {
       <span className="min-w-0 flex-1 leading-tight">
         <span className="block truncate text-sm font-semibold text-white">{name}</span>
         {user?.email && <span className="block truncate text-xs text-blue-200/60">{user.email}</span>}
+        {user?.viewOnly && (
+          <span className="mt-1 inline-flex rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+            View only
+          </span>
+        )}
       </span>
       <button
         type="button"
@@ -146,7 +155,7 @@ export function SidebarNav({ user }: { user: AdminUser | null }) {
     <aside className={`z-20 hidden w-64 shrink-0 flex-col gap-8 px-4 py-6 lg:flex ${SIDEBAR_BG}`}>
       <Brand />
       <div className="flex-1 overflow-y-auto">
-        <NavLinks pathname={pathname} />
+        <NavLinks pathname={pathname} viewOnly={user?.viewOnly} />
       </div>
       <UserCard user={user} />
     </aside>
@@ -190,7 +199,7 @@ export function MobileNav({ user }: { user: AdminUser | null }) {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <NavLinks pathname={pathname} onNavigate={() => setOpen(false)} />
+              <NavLinks pathname={pathname} onNavigate={() => setOpen(false)} viewOnly={user?.viewOnly} />
             </div>
             <UserCard user={user} />
           </div>

@@ -5,6 +5,10 @@
 export const ACCESS_COOKIE = "mss_admin_access";
 export const REFRESH_COOKIE = "mss_admin_refresh";
 export const EXPIRES_COOKIE = "mss_admin_expires"; // epoch ms, not secret
+/** "admin" or "viewer", from the API at sign-in. Only drives what the site shows;
+ * the API itself refuses every change from a viewer. */
+export const ROLE_COOKIE = "mss_admin_role";
+export type AdminRole = "admin" | "viewer";
 
 /** Refresh when less than this much access-token lifetime remains. */
 export const REFRESH_MARGIN_MS = 60_000;
@@ -29,8 +33,9 @@ const base = {
   path: "/",
 };
 
-export function writeSession(cookies: CookieWriter, tokens: TokenSet): void {
+export function writeSession(cookies: CookieWriter, tokens: TokenSet, role?: AdminRole): void {
   const ttl = (tokens.expires_in ?? 900) * 1000;
+  if (role) cookies.set(ROLE_COOKIE, role, { ...base, maxAge: REFRESH_MAX_AGE_S });
   cookies.set(ACCESS_COOKIE, tokens.access_token, { ...base, maxAge: Math.ceil(ttl / 1000) });
   cookies.set(REFRESH_COOKIE, tokens.refresh_token, { ...base, maxAge: REFRESH_MAX_AGE_S });
   cookies.set(EXPIRES_COOKIE, String(Date.now() + ttl), { ...base, maxAge: REFRESH_MAX_AGE_S });
@@ -40,4 +45,5 @@ export function clearSession(cookies: CookieWriter): void {
   cookies.delete(ACCESS_COOKIE);
   cookies.delete(REFRESH_COOKIE);
   cookies.delete(EXPIRES_COOKIE);
+  cookies.delete(ROLE_COOKIE);
 }

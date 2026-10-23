@@ -1,5 +1,6 @@
 "use server";
 
+import { isViewOnly, VIEW_ONLY_ERROR } from "@/lib/mss/role";
 import { revalidatePath } from "next/cache";
 import { describeError } from "@/lib/mss/api";
 import {
@@ -53,6 +54,7 @@ export async function saveScheme(input: {
   collection: Collection;
   scheme: SchemeRecord;
 }): Promise<ActionResult<{ draftId: string | null; version: number | null; unchanged: boolean }>> {
+  if (await isViewOnly()) return { ok: false, error: VIEW_ONLY_ERROR };
   const invalid = validateRecord(input.collection, input.scheme);
   if (invalid) return { ok: false, error: invalid };
   try {
@@ -76,6 +78,7 @@ function checkNote(note: string): string | null {
 }
 
 export async function approveScheme(draftId: string, version: number, note: string): Promise<ActionResult<{ version: number }>> {
+  if (await isViewOnly()) return { ok: false, error: VIEW_ONLY_ERROR };
   const bad = checkNote(note);
   if (bad) return { ok: false, error: bad };
   try {
@@ -88,6 +91,7 @@ export async function approveScheme(draftId: string, version: number, note: stri
 }
 
 export async function discardScheme(draftId: string, version: number, note: string): Promise<ActionResult> {
+  if (await isViewOnly()) return { ok: false, error: VIEW_ONLY_ERROR };
   const bad = checkNote(note);
   if (bad) return { ok: false, error: bad };
   try {
@@ -100,6 +104,7 @@ export async function discardScheme(draftId: string, version: number, note: stri
 }
 
 export async function withdrawScheme(schemeId: string): Promise<ActionResult<{ draftId: string }>> {
+  if (await isViewOnly()) return { ok: false, error: VIEW_ONLY_ERROR };
   if (!SCHEME_ID_PATTERN.test(schemeId)) return { ok: false, error: "Invalid scheme ID." };
   try {
     const d = await createWithdrawal(schemeId);
@@ -112,6 +117,7 @@ export async function withdrawScheme(schemeId: string): Promise<ActionResult<{ d
 
 /** Preview a dataset envelope (writes nothing on the server). */
 export async function previewDataset(dataset: unknown): Promise<ActionResult<UploadPreview>> {
+  if (await isViewOnly()) return { ok: false, error: VIEW_ONLY_ERROR };
   try {
     return { ok: true, data: await previewUpload(dataset, newIdempotencyKey("upload")) };
   } catch (e) {
@@ -120,6 +126,7 @@ export async function previewDataset(dataset: unknown): Promise<ActionResult<Upl
 }
 
 export async function stageDataset(uploadId: string): Promise<ActionResult<{ drafts: number }>> {
+  if (await isViewOnly()) return { ok: false, error: VIEW_ONLY_ERROR };
   try {
     const drafts = await stageUpload(uploadId);
     refresh();
@@ -139,6 +146,7 @@ export async function publishApproved(
   publishKey: string,
   notify: boolean,
 ): Promise<ActionResult<PublishResult>> {
+  if (await isViewOnly()) return { ok: false, error: VIEW_ONLY_ERROR };
   if (!drafts.length) return { ok: false, error: "Select at least one approved draft." };
   if (drafts.length > 2000) return { ok: false, error: "Publish at most 2000 drafts at a time." };
   if (!/^[A-Za-z0-9_-]{16,100}$/.test(publishKey)) return { ok: false, error: "Reload the page and try again." };
@@ -176,6 +184,7 @@ export async function publishAndNotify(input: {
   publishKey: string;
   notify: { title: string; message: string; type: string; campaignKey: string } | null;
 }): Promise<ActionResult<PublishAndNotifyResult>> {
+  if (await isViewOnly()) return { ok: false, error: VIEW_ONLY_ERROR };
   if (!/^[A-Za-z0-9_-]{16,100}$/.test(input.publishKey)) return { ok: false, error: "Reload the page and try again." };
   const n = input.notify;
   let notification: { title: string; message: string; type: (typeof NOTIFY_TYPES)[number] } | null = null;

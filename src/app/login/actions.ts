@@ -62,13 +62,15 @@ export async function login(formData: FormData) {
     });
     back(
       check?.status === 403
-        ? "This account is not an MSS admin. Ask the server administrator to grant the admin role."
+        ? "This account is not an MSS admin or viewer. Ask the server administrator to grant access."
         : "Could not verify admin access. Try again.",
       redirectTo,
     );
   }
 
-  writeSession(await cookies(), tokens);
+  // "viewer" accounts may look at everything; the API refuses their changes.
+  const { role } = ((await check.json().catch(() => ({}))) ?? {}) as { role?: string };
+  writeSession(await cookies(), tokens, role === "viewer" ? "viewer" : "admin");
   redirect(redirectTo);
 }
 
