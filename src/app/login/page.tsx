@@ -2,6 +2,8 @@ import Image from "next/image";
 import { ShieldCheck } from "lucide-react";
 import { DitherCanvas } from "@/components/login/DitherCanvas";
 import { SignInButton } from "@/components/login/SignInButton";
+import { TurnstileWidget } from "@/components/login/TurnstileWidget";
+import { TURNSTILE_ACTION, turnstileSiteKey } from "@/lib/mss/turnstile";
 import { login } from "./actions";
 
 export default async function LoginPage({
@@ -13,6 +15,7 @@ export default async function LoginPage({
   const error = params?.error;
   const raw = params?.redirectTo || "/";
   const redirectTo = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/";
+  const siteKey = turnstileSiteKey();
 
   const field =
     "h-11 w-full rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15";
@@ -41,6 +44,7 @@ export default async function LoginPage({
                 <span className="font-mono text-xs font-semibold text-slate-700">Password</span>
                 <input name="password" type="password" required autoComplete="current-password" placeholder="Enter your password" className={field} />
               </label>
+              {siteKey && <TurnstileWidget siteKey={siteKey} action={TURNSTILE_ACTION} />}
               <SignInButton />
             </form>
 

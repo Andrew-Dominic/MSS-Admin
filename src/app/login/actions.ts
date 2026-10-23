@@ -1,9 +1,10 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { apiUrl } from "@/lib/mss/config";
 import { REFRESH_COOKIE, ACCESS_COOKIE, clearSession, writeSession, type TokenSet } from "@/lib/mss/session";
+import { verifyTurnstile } from "@/lib/mss/turnstile";
 
 /** Only same-site paths, never "//host" or "https://..." (open redirect). */
 function safeRedirect(target: string | null): string {
@@ -31,6 +32,13 @@ export async function login(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const redirectTo = safeRedirect(formData.get("redirectTo") as string | null);
   if (!email || !password) back("Enter your email and password.", redirectTo);
+
+  // Cloudflare Turnstile: checked before the password is tried (off until configured).
+  const human = await verifyTurnstile(
+    formData.get("cf-turnstile-response") as string | null,
+    (await headers()).get("x-real-ip"),
+  );
+  if (!human) back("Please complete the human verification and try again.", redirectTo);
 
   const res = await call("/auth/password/login", {
     method: "POST",
