@@ -1,707 +1,228 @@
-'use server';
+"use server";
 
-import { createClient } from "@/lib/supabase/server";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { 
-  SchemeFormValues, 
-  schemeFormSchema, 
-  mapDbSchemeToFormValues,
-  STATES, 
-  SCHEME_CATEGORIES, 
-  ENTERPRISE_SCALES, 
-  DEMOGRAPHIC_TAGS, 
-  BENEFIT_TYPES, 
-  APPLICATION_MODES 
-} from "@/lib/schema/scheme";
-import { saveOverride, getOverrides } from "@/lib/catalogOverrides";
 import { revalidatePath } from "next/cache";
-import { requireAdminAuth } from "@/lib/authGuard";
-import crypto from "crypto";
+import { describeError } from "@/lib/mss/api";
+import {
+  approveDraft,
+  createDraft,
+  createWithdrawal,
+  discardDraft,
+  getDraft,
+  newIdempotencyKey,
+  previewUpload,
+  publishDrafts,
+  sendBroadcast,
+  stageUpload,
+  updateDraft,
+} from "@/lib/mss/schemes";
+import {
+  COLLECTIONS,
+  SCHEME_ID_PATTERN,
+  collectionForId,
+  type BroadcastReceipt,
+  type Collection,
+  type PublishResult,
+  type SchemeRecord,
+  type UploadPreview,
+} from "@/lib/mss/types";
+import { audienceStates } from "@/lib/mss/changes";
 
-function computeSha256(content: string): string {
-  return crypto.createHash("sha256").update(content, "utf8").digest("hex");
+export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
+
+const fail = (error: unknown): { ok: false; error: string } => ({ ok: false, error: describeError(error) });
+
+function refresh() {
+  revalidatePath("/", "layout");
 }
 
-function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error("Missing Supabase admin configuration");
-  }
-  return createSupabaseClient(url, key);
+function validateRecord(collection: Collection, scheme: SchemeRecord): string | null {
+  if (!COLLECTIONS.some((c) => c.value === collection)) return "Choose a collection.";
+  if (!scheme || typeof scheme !== "object") return "The scheme record is empty.";
+  if (!SCHEME_ID_PATTERN.test(scheme.id ?? "")) return "Scheme ID must look like CEN2026-001, TN2026-001 or MAH2026-001.";
+  if (collectionForId(scheme.id) !== collection) return "The scheme ID prefix does not match the chosen collection.";
+  if (!scheme.name?.en?.trim()) return "An English name is required.";
+  if (!scheme.level) return "Choose a level (central, state or central_state).";
+  if (!scheme.state?.trim()) return "A state is required (use \"All India\" for nationwide schemes).";
+  return null;
 }
 
-/**
- * Builds canonical Catalog v3.1 record JSON complying strictly with reference skeleton (SCH000124)
- */
-function buildCatalogRecordJson(
-  entityId: string, 
-  validated: SchemeFormValues, 
-  existingRecord?: any
-) {
-  const existingIdentity = existingRecord?.identity || {};
-  const existingContent = existingRecord?.content || {};
-  const existingClassification = existingContent?.classification || {};
-
-  return {
-    identity: {
-      ...existingIdentity,
-      id: entityId,
-      entityType: "scheme",
-      code: validated.code,
-      legacyCodes: existingIdentity.legacyCodes || [],
-      name: validated.title,
-      shortName: validated.code,
-      acronym: existingIdentity.acronym || null,
-      slug: validated.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
-      language: "en",
-      status: existingIdentity.status || "active",
-      updated_at: new Date().toISOString(),
-    },
-    content: {
-      ...existingContent,
-      classification: {
-        government: {
-          level: validated.isCentral ? "central" : "state",
-          levelText: validated.isCentral ? "Central" : "State",
-          country: "IN",
-          states: validated.isCentral ? [] : [validated.targetState],
-          statesText: validated.isCentral ? "Pan-India" : validated.targetState,
-          ministryText: validated.ministry,
-          departmentText: validated.sponsoringAuthority,
-          implementingAgencyText: validated.implementingAgency || validated.sponsoringAuthority,
-        },
-        schemeType: validated.category.toLowerCase().replace(/[^a-z0-9]/g, "_"),
-        schemeTypeText: validated.category,
-        sectors: existingClassification.sectors || [],
-        sectorsText: validated.category,
-        categories: existingClassification.categories || [],
-        tags: validated.demographicTags,
-      },
-      overview: {
-        summary: validated.summaryEn || validated.title,
-        description: validated.descriptionEn || validated.summaryEn || validated.title,
-        objective: validated.objectivesEn || validated.title,
-        version: "Catalog v3.1",
-        lastUpdatedText: "Current",
-      },
-      objectives: [validated.objectivesEn || validated.title],
-      targetBeneficiaries: {
-        description: `Targeting ${validated.enterpriseScales.join(", ")} enterprises: ${
-          validated.demographicTags.join(", ") || "General applicants"
-        }`,
-        beneficiaryTypes: [],
-        enterpriseTypes: validated.enterpriseScales.map((s) => s.toLowerCase()),
-        businessStages: [],
-        specialCategories: validated.demographicTags,
-      },
-      eligibility: {
-        structured: {
-          age: {
-            minYears: validated.minAge || null,
-            maxYears: validated.maxAge || null,
-            text: validated.minAge || validated.maxAge
-              ? `${validated.minAge || 18} to ${validated.maxAge || 65} years`
-              : null,
-          },
-          gender: {
-            values: validated.genderTarget === "All" ? [] : [validated.genderTarget],
-          },
-          enterprise: {
-            applies: true,
-            types: validated.enterpriseScales.map((s) => s.toLowerCase()),
-          },
-          specialCategory: {
-            values: validated.demographicTags,
-          },
-          turnover: {
-            maxInr: validated.turnoverCapInr || null,
-          },
-          investment: {
-            maxInr: validated.investmentCapInr || null,
-          },
-        },
-        narrative: {
-          criteria: `Eligible for ${validated.enterpriseScales.join(", ")} MSMEs in ${validated.targetState}.`,
-        },
-      },
-      benefits: {
-        summary: validated.benefitsSummary || `${validated.benefitType} financial assistance`,
-        benefitTypes: [validated.benefitType],
-        capitalSubsidy: {
-          minAmountInr: validated.benefitAmountMin || null,
-          maxAmountInr: validated.benefitAmountMax || null,
-          maxAmountText: validated.benefitAmountMax ? `₹${validated.benefitAmountMax.toLocaleString("en-IN")}` : null,
-          subsidyPercentage: validated.subsidyPercentage || null,
-          description: validated.benefitsSummary || `${validated.benefitType} up to ₹${validated.benefitAmountMax || "N/A"}`,
-        },
-      },
-      requiredDocuments: validated.requiredDocuments.map((doc, idx) => ({
-        documentId: `${entityId}-DOC${String(idx + 1).padStart(3, "0")}`,
-        name: doc,
-        mandatory: "required",
-        mandatoryText: "Yes",
-        description: `Required submission document: ${doc}`,
-      })),
-      applicationProcess: {
-        onlineUrl: validated.schemeUrl || null,
-        modeText: validated.applicationMode,
-      },
-      schemeUrl: validated.schemeUrl || null,
-      resources: {
-        officialWebsiteUrl: validated.schemeUrl || null,
-      },
-      localization: {
-        en: {
-          name: validated.title,
-          summary: validated.summaryEn || validated.title,
-          description: validated.descriptionEn || validated.summaryEn || validated.title,
-          benefitsText: validated.benefitsSummary || `${validated.benefitType} financial assistance`,
-        },
-        ta: {
-          name: validated.titleTa || validated.title,
-          summary: validated.summaryTa || validated.summaryEn || validated.title,
-          description: validated.descriptionTa || validated.descriptionEn || validated.title,
-          benefitsText: validated.benefitsTa || validated.benefitsSummary || `${validated.benefitType} நிதி உதவி`,
-        },
-        hi: {
-          name: validated.titleHi || validated.title,
-          summary: validated.summaryHi || validated.summaryEn || validated.title,
-          description: validated.descriptionHi || validated.descriptionEn || validated.title,
-          benefitsText: validated.benefitsHi || validated.benefitsSummary || `${validated.benefitType} वित्तीय सहायता`,
-        },
-      },
-    },
-  };
-}
-
-/**
- * Submits a new scheme draft into catalog.scheme and catalog.content
- */
-export async function submitSchemeDraft(data: SchemeFormValues) {
-  await requireAdminAuth();
-  const supabase = await createClient();
-
-  const result = schemeFormSchema.safeParse(data);
-  if (!result.success) {
-    const errorMessages = result.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
-    return { error: `Validation failed: ${errorMessages}` };
-  }
-
-  const validated = result.data;
-  const { data: { user } } = await supabase.auth.getUser();
-  const userId = user?.id || null;
-
-  const supabaseAdmin = getAdminClient();
-  const entityId = crypto.randomUUID();
-  const recordJson = buildCatalogRecordJson(entityId, validated);
-  const recordJsonString = JSON.stringify(recordJson);
-  const recordChecksum = `sha256:${computeSha256(recordJsonString)}`;
-
-  // 1. Primary insert via create_scheme_draft RPC
-  // NOTE: p_id requires a UUID, and p_changed_by: null satisfies catalog_change_log foreign key
-  const { error: rpcError } = await supabaseAdmin.rpc("create_scheme_draft", {
-    p_id: entityId,
-    p_record_json: recordJson,
-    p_scheme_code: validated.code,
-    p_name_en: validated.title,
-    p_state: validated.targetState,
-    p_scheme_type: validated.category,
-    p_primary_authority_id: validated.sponsoringAuthority,
-    p_changed_by: null,
-  });
-
-  // 2. Check for duplicate code or constraint violations
-  if (rpcError) {
-    if (rpcError.code === "23505" || rpcError.message?.includes("unique constraint") || rpcError.message?.includes("already exists")) {
-      return { error: `Scheme code "${validated.code}" already exists in the catalog. Please choose a unique scheme code.` };
+/** Create a new draft, or save changes to an open draft (optimistic locking by version). */
+export async function saveScheme(input: {
+  draftId?: string;
+  version?: number;
+  collection: Collection;
+  scheme: SchemeRecord;
+}): Promise<ActionResult<{ draftId: string | null; version: number | null; unchanged: boolean }>> {
+  const invalid = validateRecord(input.collection, input.scheme);
+  if (invalid) return { ok: false, error: invalid };
+  try {
+    if (input.draftId && input.version) {
+      const d = await updateDraft(input.draftId, input.version, input.collection, input.scheme);
+      refresh();
+      return { ok: true, data: { draftId: d.id, version: d.version, unchanged: false } };
     }
-    console.warn("create_scheme_draft RPC error, attempting direct catalog.scheme insert:", rpcError.message);
-
-    const { error: directError } = await supabaseAdmin
-      .schema("catalog")
-      .from("scheme")
-      .insert({
-        id: entityId,
-        version: "1.36.0-alpha",
-        status: "DRAFT",
-        checksum: recordChecksum,
-        record_json: recordJson,
-        scheme_code: validated.code,
-        name_en: validated.title,
-        name_ta: validated.titleTa || null,
-        government_level: validated.isCentral ? "central" : "state",
-        scheme_type: validated.category,
-        state: validated.targetState,
-        ministry: validated.ministry,
-        department: validated.sponsoringAuthority,
-        search_keywords: `${validated.title} ${validated.category} ${validated.enterpriseScales.join(" ")}`,
-        primary_authority_id: validated.sponsoringAuthority,
-        scheme_url: validated.schemeUrl || null,
-        is_active: true,
-      });
-
-    if (directError) {
-      console.warn("Direct catalog.scheme insert note:", directError.message);
-    }
+    const d = await createDraft(input.collection, input.scheme);
+    refresh();
+    if ("unchanged" in d) return { ok: true, data: { draftId: null, version: null, unchanged: true } };
+    return { ok: true, data: { draftId: d.id, version: d.version, unchanged: false } };
+  } catch (e) {
+    return fail(e);
   }
+}
 
-  // Stage in catalogOverrides so it reflects immediately in UI
-  saveOverride(entityId, {
-    id: entityId,
-    scheme_code: validated.code,
-    name_en: validated.title,
-    state: validated.targetState,
-    scheme_type: validated.category,
-    status: "DRAFT",
-    is_active: true,
-    record_json: recordJson,
-  });
+function checkNote(note: string): string | null {
+  const n = note.trim();
+  return n.length < 10 || n.length > 2000 ? "Write a note of 10 to 2000 characters." : null;
+}
 
-  // 3. Populate trilingual content in catalog.content
+export async function approveScheme(draftId: string, version: number, note: string): Promise<ActionResult<{ version: number }>> {
+  const bad = checkNote(note);
+  if (bad) return { ok: false, error: bad };
   try {
-    const contentRows = [
-      {
-        entity_type: "scheme",
-        entity_id: entityId,
-        lang: "en",
-        name: validated.title,
-        summary: validated.summaryEn || validated.title,
-        description: validated.descriptionEn || validated.summaryEn || validated.title,
-        benefits_text: validated.benefitsSummary || `${validated.benefitType} financial assistance`,
-        origin: "human",
-        verified: true,
-      },
-      {
-        entity_type: "scheme",
-        entity_id: entityId,
-        lang: "ta",
-        name: validated.titleTa || validated.title,
-        summary: validated.summaryTa || validated.summaryEn || validated.title,
-        description: validated.descriptionTa || validated.descriptionEn || validated.title,
-        benefits_text: validated.benefitsTa || validated.benefitsSummary || `${validated.benefitType} நிதி உதவி`,
-        origin: "human",
-        verified: !!validated.titleTa,
-      },
-      {
-        entity_type: "scheme",
-        entity_id: entityId,
-        lang: "hi",
-        name: validated.titleHi || validated.title,
-        summary: validated.summaryHi || validated.summaryEn || validated.title,
-        description: validated.descriptionHi || validated.descriptionEn || validated.title,
-        benefits_text: validated.benefitsHi || validated.benefitsSummary || `${validated.benefitType} वित्तीय सहायता`,
-        origin: "human",
-        verified: !!validated.titleHi,
-      },
-    ];
-
-    await supabaseAdmin
-      .schema("catalog")
-      .from("content")
-      .upsert(contentRows, { onConflict: "entity_type,entity_id,lang" });
-  } catch (contentErr) {
-    console.warn("Could not insert to catalog.content (non-fatal):", contentErr);
+    const d = await approveDraft(draftId, version, note.trim());
+    refresh();
+    return { ok: true, data: { version: d.version } };
+  } catch (e) {
+    return fail(e);
   }
+}
 
-  // 4. Log admin audit action
+export async function discardScheme(draftId: string, version: number, note: string): Promise<ActionResult> {
+  const bad = checkNote(note);
+  if (bad) return { ok: false, error: bad };
   try {
-    await supabaseAdmin
-      .schema("admin")
-      .from("catalog_change_log")
-      .insert({
-        entity: "scheme",
-        entity_id: entityId,
-        field_path: "record_json",
-        new_value: recordJson,
-        reason: `Admin drafted scheme "${validated.title}" (${validated.code}) via Admin Panel`,
-        changed_by: userId,
-      });
-  } catch (logErr) {
-    console.warn("Could not log to admin.catalog_change_log:", logErr);
+    await discardDraft(draftId, version, note.trim());
+    refresh();
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return fail(e);
   }
+}
 
-  revalidatePath("/schemes");
-  revalidatePath("/");
+export async function withdrawScheme(schemeId: string): Promise<ActionResult<{ draftId: string }>> {
+  if (!SCHEME_ID_PATTERN.test(schemeId)) return { ok: false, error: "Invalid scheme ID." };
+  try {
+    const d = await createWithdrawal(schemeId);
+    refresh();
+    return { ok: true, data: { draftId: d.id } };
+  } catch (e) {
+    return fail(e);
+  }
+}
 
-  return { success: true, entityId, code: validated.code };
+/** Preview a dataset envelope (writes nothing on the server). */
+export async function previewDataset(dataset: unknown): Promise<ActionResult<UploadPreview>> {
+  try {
+    return { ok: true, data: await previewUpload(dataset, newIdempotencyKey("upload")) };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function stageDataset(uploadId: string): Promise<ActionResult<{ drafts: number }>> {
+  try {
+    const drafts = await stageUpload(uploadId);
+    refresh();
+    return { ok: true, data: { drafts: drafts.length } };
+  } catch (e) {
+    return fail(e);
+  }
 }
 
 /**
- * Updates an existing scheme in catalog.scheme and catalog.content
+ * [publishKey] is created by the page for this exact selection and reused if
+ * the admin retries after an uncertain failure, so the API replays the
+ * original release instead of publishing twice.
  */
-export async function updateScheme(id: string, data: SchemeFormValues) {
-  await requireAdminAuth();
-  const supabase = await createClient();
-
-  const result = schemeFormSchema.safeParse(data);
-  if (!result.success) {
-    const errorMessages = result.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
-    return { error: `Validation failed: ${errorMessages}` };
-  }
-
-  const validated = result.data;
-  const { data: { user } } = await supabase.auth.getUser();
-  const userId = user?.id || null;
-
-  const supabaseAdmin = getAdminClient();
-
-  // Fetch existing scheme record to preserve legacy identifiers and system metadata
-  const { data: existingScheme } = await supabaseAdmin
-    .schema("catalog")
-    .from("scheme")
-    .select("record_json, status, is_active")
-    .eq("id", id)
-    .maybeSingle();
-
-  const recordJson = buildCatalogRecordJson(id, validated, existingScheme?.record_json);
-  const recordJsonString = JSON.stringify(recordJson);
-  const recordChecksum = `sha256:${computeSha256(recordJsonString)}`;
-
-  // 1. Attempt direct catalog.scheme update if schema is exposed
-  const { error: updateError } = await supabaseAdmin
-    .schema("catalog")
-    .from("scheme")
-    .update({
-      checksum: recordChecksum,
-      record_json: recordJson,
-      scheme_code: validated.code,
-      name_en: validated.title,
-      name_ta: validated.titleTa || null,
-      government_level: validated.isCentral ? "central" : "state",
-      scheme_type: validated.category,
-      state: validated.targetState,
-      ministry: validated.ministry,
-      department: validated.sponsoringAuthority,
-      search_keywords: `${validated.title} ${validated.category} ${validated.enterpriseScales.join(" ")}`,
-      primary_authority_id: validated.sponsoringAuthority,
-      scheme_url: validated.schemeUrl || null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id);
-
-  if (updateError) {
-    console.warn("Direct catalog.scheme update note:", updateError.message);
-  }
-
-  // 2. Persist in catalogOverrides so update is instant and guaranteed
-  saveOverride(id, {
-    id,
-    scheme_code: validated.code,
-    name_en: validated.title,
-    state: validated.targetState,
-    scheme_type: validated.category,
-    status: existingScheme?.status || "PUBLISHED",
-    is_active: existingScheme?.is_active !== false,
-    record_json: recordJson,
-  });
-
-  // 3. Update localized content in catalog.content if exposed
+export async function publishApproved(
+  drafts: { id: string; version: number }[],
+  publishKey: string,
+  notify: boolean,
+): Promise<ActionResult<PublishResult>> {
+  if (!drafts.length) return { ok: false, error: "Select at least one approved draft." };
+  if (drafts.length > 2000) return { ok: false, error: "Publish at most 2000 drafts at a time." };
+  if (!/^[A-Za-z0-9_-]{16,100}$/.test(publishKey)) return { ok: false, error: "Reload the page and try again." };
   try {
-    const contentRows = [
-      {
-        entity_type: "scheme",
-        entity_id: id,
-        lang: "en",
-        name: validated.title,
-        summary: validated.summaryEn || validated.title,
-        description: validated.descriptionEn || validated.summaryEn || validated.title,
-        benefits_text: validated.benefitsSummary || `${validated.benefitType} financial assistance`,
-        origin: "human",
-        verified: true,
-      },
-      {
-        entity_type: "scheme",
-        entity_id: id,
-        lang: "ta",
-        name: validated.titleTa || validated.title,
-        summary: validated.summaryTa || validated.summaryEn || validated.title,
-        description: validated.descriptionTa || validated.descriptionEn || validated.title,
-        benefits_text: validated.benefitsTa || validated.benefitsSummary || `${validated.benefitType} நிதி உதவி`,
-        origin: "human",
-        verified: !!validated.titleTa,
-      },
-      {
-        entity_type: "scheme",
-        entity_id: id,
-        lang: "hi",
-        name: validated.titleHi || validated.title,
-        summary: validated.summaryHi || validated.summaryEn || validated.title,
-        description: validated.descriptionHi || validated.descriptionEn || validated.title,
-        benefits_text: validated.benefitsHi || validated.benefitsSummary || `${validated.benefitType} वित्तीय सहायता`,
-        origin: "human",
-        verified: !!validated.titleHi,
-      },
-    ];
-
-    await supabaseAdmin
-      .schema("catalog")
-      .from("content")
-      .upsert(contentRows, { onConflict: "entity_type,entity_id,lang" });
-  } catch (contentErr) {
-    console.warn("Could not upsert to catalog.content (non-fatal):", contentErr);
+    const result = await publishDrafts(drafts, publishKey, notify);
+    refresh();
+    return { ok: true, data: result };
+  } catch (e) {
+    return fail(e);
   }
+}
 
-  revalidatePath("/schemes");
-  revalidatePath(`/schemes/${id}`);
-  revalidatePath("/");
+const NOTIFY_TYPES = ["new_schemes", "reminders", "updates", "profile"] as const;
+const UUID_V = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-  return { success: true, entityId: id, code: validated.code };
+export interface PublishAndNotifyResult {
+  /** Null when the draft had already been published by an earlier attempt. */
+  releaseVersion: string | null;
+  replayed: boolean;
+  broadcast: BroadcastReceipt | null;
+  /** Set when publishing worked but the notification could not be queued. */
+  broadcastError?: string;
 }
 
 /**
- * Fast inline update for a scheme's primary metadata (name, code, state, category, status)
+ * Approve (if needed) and publish one draft as its own release, then
+ * optionally notify the users it concerns. Each step is safe to retry: the
+ * draft's status says which steps already happened, [publishKey] replays an
+ * uncertain publish and [notify.campaignKey] an uncertain broadcast.
  */
-export async function quickUpdateScheme(id: string, updates: {
-  name_en: string;
-  scheme_code: string;
-  state: string;
-  scheme_type: string;
-  status: string;
-}): Promise<{ success: boolean; error?: string }> {
+export async function publishAndNotify(input: {
+  draftId: string;
+  version: number;
+  note: string;
+  publishKey: string;
+  notify: { title: string; message: string; type: string; campaignKey: string } | null;
+}): Promise<ActionResult<PublishAndNotifyResult>> {
+  if (!/^[A-Za-z0-9_-]{16,100}$/.test(input.publishKey)) return { ok: false, error: "Reload the page and try again." };
+  const n = input.notify;
+  let notification: { title: string; message: string; type: (typeof NOTIFY_TYPES)[number] } | null = null;
+  if (n) {
+    const title = n.title.trim();
+    const message = n.message.trim();
+    if (title.length < 1 || title.length > 200) return { ok: false, error: "The notification title must be 1 to 200 characters." };
+    if (message.length < 1 || message.length > 5000) return { ok: false, error: "The notification message must be 1 to 5000 characters." };
+    if (!UUID_V.test(n.campaignKey)) return { ok: false, error: "Reload the page and try again." };
+    const type = (NOTIFY_TYPES as readonly string[]).includes(n.type) ? (n.type as (typeof NOTIFY_TYPES)[number]) : "updates";
+    notification = { title, message, type };
+  }
   try {
-    await requireAdminAuth();
-    const supabaseAdmin = getAdminClient();
-    const isActive = updates.status !== "DISABLED";
-
-    // 1. Fetch existing scheme record to preserve content/eligibility
-    const { data: existingScheme } = await supabaseAdmin
-      .schema("catalog")
-      .from("scheme")
-      .select("record_json")
-      .eq("id", id)
-      .maybeSingle();
-
-    const recordJson = existingScheme?.record_json || {};
-    if (recordJson.identity) {
-      recordJson.identity.name = updates.name_en;
-      recordJson.identity.code = updates.scheme_code;
-      recordJson.identity.status = isActive ? (updates.status === "PUBLISHED" ? "active" : "draft") : "inactive";
-      recordJson.identity.updated_at = new Date().toISOString();
+    let draft = await getDraft(input.draftId);
+    if (draft.action !== "upsert") return { ok: false, error: "Only scheme changes can be published from here. Use Releases for withdrawals." };
+    if (draft.status === "discarded") return { ok: false, error: "This draft was discarded." };
+    let releaseVersion: string | null = null;
+    let replayed = false;
+    if (draft.status !== "published") {
+      if (draft.version !== input.version && draft.status === "draft") {
+        return { ok: false, error: "This draft changed since the page loaded. Reload it and try again." };
+      }
+      if (draft.status === "draft") {
+        const bad = checkNote(input.note);
+        if (bad) return { ok: false, error: bad };
+        draft = await approveDraft(draft.id, draft.version, input.note.trim());
+      }
+      const result = await publishDrafts([{ id: draft.id, version: draft.version }], input.publishKey, false);
+      releaseVersion = result.release_version;
+      replayed = result.replayed;
     }
-    if (recordJson.content?.classification) {
-      recordJson.content.classification.schemeTypeText = updates.scheme_type;
-      if (recordJson.content.classification.government) {
-        recordJson.content.classification.government.states = updates.state === "All India" ? [] : [updates.state];
-        recordJson.content.classification.government.statesText = updates.state;
+    refresh();
+    let broadcast: BroadcastReceipt | null = null;
+    if (notification && n) {
+      const collection = draft.payload?.collection ?? collectionForId(draft.scheme_id);
+      const states = audienceStates(collection);
+      try {
+        broadcast = await sendBroadcast(
+          { title: notification.title, message: notification.message, notification_type: notification.type, audience: states.length ? { states } : {} },
+          n.campaignKey,
+        );
+      } catch (e) {
+        return { ok: true, data: { releaseVersion, replayed, broadcast: null, broadcastError: describeError(e) } };
       }
     }
-
-    // 2. Direct catalog update if exposed
-    const { error: dbError } = await supabaseAdmin
-      .schema("catalog")
-      .from("scheme")
-      .update({
-        name_en: updates.name_en,
-        scheme_code: updates.scheme_code,
-        state: updates.state,
-        scheme_type: updates.scheme_type,
-        status: updates.status,
-        is_active: isActive,
-        record_json: recordJson,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-
-    if (dbError) {
-      console.warn("Direct quickUpdateScheme note:", dbError.message);
-    }
-
-    // 3. Save to catalogOverrides
-    saveOverride(id, {
-      id,
-      name_en: updates.name_en,
-      scheme_code: updates.scheme_code,
-      state: updates.state,
-      scheme_type: updates.scheme_type,
-      status: updates.status,
-      is_active: isActive,
-      record_json: recordJson,
-    });
-
-    revalidatePath("/schemes");
-    revalidatePath(`/schemes/${id}`);
-    revalidatePath("/");
-
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message || "Failed to update scheme" };
-  }
-}
-
-/**
- * Toggles a scheme's status (e.g. PUBLISHED, DRAFT, DISABLED) and is_active flag
- */
-export async function toggleSchemeStatus(id: string, newStatus: string): Promise<{
-  success: boolean;
-  id: string;
-  status: string;
-  is_active: boolean;
-  error?: string;
-}> {
-  try {
-    await requireAdminAuth();
-    const supabaseAdmin = getAdminClient();
-    const isActive = newStatus !== "DISABLED";
-
-    const { data: existingScheme } = await supabaseAdmin
-      .schema("catalog")
-      .from("scheme")
-      .select("record_json")
-      .eq("id", id)
-      .maybeSingle();
-
-    const recordJson = existingScheme?.record_json || {};
-    if (recordJson.identity) {
-      recordJson.identity.status = isActive ? (newStatus === "PUBLISHED" ? "active" : "draft") : "inactive";
-      recordJson.identity.updated_at = new Date().toISOString();
-    }
-
-    // 1. Attempt Supabase direct update
-    const { error } = await supabaseAdmin
-      .schema("catalog")
-      .from("scheme")
-      .update({
-        status: newStatus,
-        is_active: isActive,
-        record_json: recordJson,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-
-    if (error) {
-      console.warn("Direct toggleSchemeStatus note:", error.message);
-    }
-
-    // 2. Save status override
-    saveOverride(id, {
-      id,
-      status: newStatus,
-      is_active: isActive,
-      record_json: recordJson,
-    });
-
-    revalidatePath("/schemes");
-    revalidatePath(`/schemes/${id}`);
-    revalidatePath("/");
-
-    return { success: true, id, status: newStatus, is_active: isActive };
-  } catch (err: any) {
-    return {
-      success: false,
-      id,
-      status: newStatus,
-      is_active: newStatus !== "DISABLED",
-      error: err.message || "Failed to toggle scheme status",
-    };
-  }
-}
-
-/**
- * Deletes a scheme and its localized content from the catalog
- */
-export async function deleteScheme(id: string): Promise<{
-  success: boolean;
-  id: string;
-  error?: string;
-}> {
-  try {
-    await requireAdminAuth();
-    const supabaseAdmin = getAdminClient();
-
-    // 1. Attempt Supabase direct delete
-    const { error } = await supabaseAdmin
-      .schema("catalog")
-      .from("scheme")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      console.warn("Direct deleteScheme note:", error.message);
-    }
-
-    // 2. Mark as deleted in overrides
-    saveOverride(id, {
-      id,
-      isDeleted: true,
-      is_active: false,
-      status: "DELETED",
-    });
-
-    revalidatePath("/schemes");
-    revalidatePath("/");
-
-    return { success: true, id };
-  } catch (err: any) {
-    return {
-      success: false,
-      id,
-      error: err.message || "Failed to delete scheme",
-    };
-  }
-}
-
-/**
- * Fetches a single scheme by ID using mss_scheme_detail RPC and parses it into SchemeFormValues
- */
-export async function fetchSchemeById(id: string): Promise<{
-  data?: SchemeFormValues;
-  raw?: any;
-  error?: string;
-}> {
-  try {
-    const overrides = getOverrides();
-    const override = overrides[id];
-    if (override && override.record_json) {
-      const schemeObj = override.record_json;
-      const formValues = mapDbSchemeToFormValues({
-        id,
-        name_en: override.name_en || schemeObj.identity?.name,
-        scheme_code: override.scheme_code || schemeObj.identity?.code || id,
-        state: override.state || schemeObj.content?.classification?.government?.states?.[0] || "All India",
-        record_json: schemeObj,
-      });
-      return { data: formValues, raw: schemeObj };
-    }
-
-    const supabaseAdmin = getAdminClient();
-    const { data: detailData, error: detailError } = await supabaseAdmin.rpc("mss_scheme_detail", {
-      p_scheme_id: id,
-    });
-
-    if (detailData && detailData.scheme) {
-      const schemeObj = detailData.scheme;
-      const formValues = mapDbSchemeToFormValues({
-        id,
-        name_en: schemeObj.identity?.name,
-        scheme_code: schemeObj.identity?.code || id,
-        state: schemeObj.content?.classification?.government?.states?.[0] || "All India",
-        record_json: schemeObj,
-      });
-      return { data: formValues, raw: schemeObj };
-    }
-
-    // Fallback: If mss_scheme_detail returns null (e.g. DRAFT or UNPUBLISHED schemes), search mss_search_data
-    const { data: searchData, error: searchError } = await supabaseAdmin.rpc("mss_search_data");
-    if (Array.isArray(searchData)) {
-      const found = searchData.find((item: any) => item.scheme_id === id);
-      if (found) {
-        const profile = found.search_record?.schemeSearchProfile || {};
-        const schemeObj = found.scheme_record || {};
-        const formValues = mapDbSchemeToFormValues({
-          id,
-          name_en: found.name_en || schemeObj.identity?.name,
-          scheme_code: profile.schemeId || schemeObj.identity?.code || id,
-          state: profile.districts?.[0] || "All India",
-          scheme_type: profile.sector || "Subsidies & Incentives",
-          record_json: schemeObj,
-        });
-        return { data: formValues, raw: found };
-      }
-    }
-
-    return { error: detailError?.message || searchError?.message || `Scheme with ID "${id}" was not found in catalog` };
-  } catch (err: any) {
-    return { error: err.message || "Failed to fetch scheme from catalog" };
+    return { ok: true, data: { releaseVersion, replayed, broadcast } };
+  } catch (e) {
+    return fail(e);
   }
 }

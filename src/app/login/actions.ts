@@ -1,52 +1,87 @@
-'use server'
+"use server";
 
-import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { apiUrl } from "@/lib/mss/config";
+import { REFRESH_COOKIE, ACCESS_COOKIE, clearSession, writeSession, type TokenSet } from "@/lib/mss/session";
+import { verifyTurnstile } from "@/lib/mss/turnstile";
 
+/** Only same-site paths, never "//host" or "https://..." (open redirect). */
+function safeRedirect(target: string | null): string {
+  return target && target.startsWith("/") && !target.startsWith("//") && !target.startsWith("/\\") ? target : "/";
+}
+
+function back(error: string, redirectTo: string): never {
+  redirect(`/login?error=${encodeURIComponent(error)}&redirectTo=${encodeURIComponent(redirectTo)}`);
+}
+
+async function call(path: string, init: RequestInit): Promise<Response | null> {
+  try {
+    return await fetch(apiUrl(path), { ...init, cache: "no-store", signal: AbortSignal.timeout(20_000) });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Admin sign-in: an MSS account's email and password, accepted only when the
+ * API confirms the account holds the admin role.
+ */
 export async function login(formData: FormData) {
-  const email = (formData.get('email') as string)?.trim().toLowerCase()
-  const password = (formData.get('password') as string)?.trim()
-  const redirectTo = (formData.get('redirectTo') as string) || '/'
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  const redirectTo = safeRedirect(formData.get("redirectTo") as string | null);
+  if (!email || !password) back("Enter your email and password.", redirectTo);
 
-  // --- Development Backdoor for Testing UI ---
-  if (email === 'admin@test.com' && password === 'password') {
-    const { cookies } = await import('next/headers')
-    const cookieStore = await cookies()
-    cookieStore.set('dev_admin_auth', 'true', { 
-      path: '/', 
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-    })
-    revalidatePath('/', 'layout')
-    redirect(redirectTo)
+  // Cloudflare Turnstile: checked before the password is tried (off until configured).
+  const human = await verifyTurnstile(
+    formData.get("cf-turnstile-response") as string | null,
+    (await headers()).get("x-real-ip"),
+  );
+  if (!human) back("Please complete the human verification and try again.", redirectTo);
+
+  const res = await call("/auth/password/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res) back("The MSS API could not be reached. Try again.", redirectTo);
+  if (res.status === 429) back("Too many sign-in attempts. Wait a minute and try again.", redirectTo);
+  if (!res.ok) back("Wrong email or password.", redirectTo);
+  const tokens = (await res.json()) as TokenSet;
+
+  // The account must be an MSS admin (server-provisioned role).
+  const check = await call("/admin/security/status", {
+    headers: { Authorization: `Bearer ${tokens.access_token}`, Accept: "application/json" },
+  });
+  if (!check || !check.ok) {
+    await call("/auth/logout", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${tokens.access_token}`, "Content-Type": "application/json" },
+      body: "{}",
+    });
+    back(
+      check?.status === 403
+        ? "This account is not an MSS admin. Ask the server administrator to grant the admin role."
+        : "Could not verify admin access. Try again.",
+      redirectTo,
+    );
   }
-  // -------------------------------------------
 
-  const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  })
-
-  if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}&redirectTo=${encodeURIComponent(redirectTo)}`)
-  }
-
-  revalidatePath('/', 'layout')
-  redirect(redirectTo)
+  writeSession(await cookies(), tokens);
+  redirect(redirectTo);
 }
 
 export async function logout() {
-  try {
-    const supabase = await createClient()
-    await supabase.auth.signOut()
-  } catch (e) {
-    // ignore
+  const store = await cookies();
+  const access = store.get(ACCESS_COOKIE)?.value;
+  if (access && store.get(REFRESH_COOKIE)) {
+    await call("/auth/logout", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${access}`, "Content-Type": "application/json" },
+      body: "{}",
+    });
   }
-  const { cookies } = await import('next/headers')
-  const cookieStore = await cookies()
-  cookieStore.delete('dev_admin_auth')
-  redirect('/login')
+  clearSession(store);
+  redirect("/login");
 }

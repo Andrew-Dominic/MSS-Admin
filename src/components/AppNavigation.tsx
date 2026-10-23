@@ -1,245 +1,201 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  FileText, 
-  PlusCircle, 
-  Bug, 
-  Bell, 
-  Settings,
-  ChevronRight,
-  LogOut
-} from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { Activity, Bell, FileText, LayoutDashboard, LogOut, Menu, PlusCircle, Rocket, Upload, Users, X, type LucideIcon } from "lucide-react";
 import { logout } from "@/app/login/actions";
 
-export function SidebarNav() {
-  const pathname = usePathname();
+export interface AdminUser {
+  name: string | null;
+  email: string | null;
+}
 
-  const isOverview = pathname === "/";
-  const isSchemes = pathname.startsWith("/schemes");
-  const isNewScheme = pathname === "/schemes/new";
-  const isTickets = pathname.startsWith("/tickets");
-  const isNotifications = pathname.startsWith("/notifications");
-  const isReleases = pathname.startsWith("/releases");
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  active: (path: string) => boolean;
+}
 
+const SECTIONS: { title: string; items: NavItem[] }[] = [
+  {
+    title: "Overview",
+    items: [
+      { href: "/", label: "Dashboard", icon: LayoutDashboard, active: (p) => p === "/" },
+      { href: "/status", label: "System", icon: Activity, active: (p) => p.startsWith("/status") },
+    ],
+  },
+  {
+    title: "Catalogue",
+    items: [
+      {
+        href: "/schemes",
+        label: "Schemes",
+        icon: FileText,
+        active: (p) => p.startsWith("/schemes") && p !== "/schemes/new" && p !== "/schemes/upload",
+      },
+      { href: "/schemes/new", label: "New scheme", icon: PlusCircle, active: (p) => p === "/schemes/new" },
+      { href: "/schemes/upload", label: "Upload dataset", icon: Upload, active: (p) => p === "/schemes/upload" },
+      { href: "/releases", label: "Releases", icon: Rocket, active: (p) => p.startsWith("/releases") },
+    ],
+  },
+  {
+    title: "Engage",
+    items: [
+      { href: "/users", label: "Users", icon: Users, active: (p) => p.startsWith("/users") },
+      { href: "/notifications", label: "Notifications", icon: Bell, active: (p) => p.startsWith("/notifications") },
+    ],
+  },
+];
+
+function initialsOf(user: AdminUser | null): { name: string; initials: string } {
+  const name = user?.name?.trim() || user?.email?.split("@")[0] || "Admin";
+  const initials = name.split(/\s+/).map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "A";
+  return { name, initials };
+}
+
+function Brand({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <aside className="hidden md:flex w-20 border-r border-gray-200 bg-white flex-col items-center py-6 gap-8 shrink-0 z-20">
-      <Link href="/" className="w-11 h-11 bg-orange-500 rounded-2xl flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-orange-500/25 hover:scale-105 transition-transform">
-        A
-      </Link>
+    <Link href="/" onClick={onNavigate} aria-label="MSS Admin home" className="group flex items-center gap-3 px-2">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white shadow-lg shadow-black/20 transition-transform duration-300 group-hover:scale-105">
+        <Image src="/brand/mss-icon.webp" alt="" width={36} height={36} priority unoptimized />
+      </span>
+      <span className="leading-tight">
+        <span className="block text-base font-bold tracking-tight text-white">MSS Admin</span>
+        <span className="block text-xs text-blue-200/70">MSME Schemes console</span>
+      </span>
+    </Link>
+  );
+}
 
-      <nav className="flex flex-col gap-3">
-        <Link 
-          href="/" 
-          title="Dashboard Overview"
-          className={`p-3 rounded-2xl transition-all duration-200 ${
-            isOverview 
-              ? "bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105" 
-              : "text-gray-400 hover:bg-gray-100 hover:text-gray-900"
-          }`}
-        >
-          <LayoutDashboard className="w-5 h-5" />
-        </Link>
+function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  return (
+    <nav aria-label="Main" className="space-y-6">
+      {SECTIONS.map((section) => (
+        <div key={section.title}>
+          <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-blue-200/50">{section.title}</p>
+          <ul className="space-y-1">
+            {section.items.map(({ href, label, icon: Icon, active }) => {
+              const on = active(pathname);
+              return (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    onClick={onNavigate}
+                    aria-current={on ? "page" : undefined}
+                    className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                      on
+                        ? "bg-white/[0.12] text-white shadow-inner shadow-white/5"
+                        : "text-blue-100/70 hover:bg-white/[0.06] hover:text-white"
+                    }`}
+                  >
+                    <span
+                      aria-hidden
+                      className={`absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-[var(--mss-saffron)] transition-opacity ${on ? "opacity-100" : "opacity-0"}`}
+                    />
+                    <Icon className={`h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110 ${on ? "text-blue-300" : ""}`} />
+                    {label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  );
+}
 
-        <Link 
-          href="/schemes" 
-          title="Schemes Catalog & Editor"
-          className={`p-3 rounded-2xl transition-all duration-200 ${
-            isSchemes && !isNewScheme
-              ? "bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105" 
-              : "text-gray-400 hover:bg-gray-100 hover:text-gray-900"
-          }`}
-        >
-          <FileText className="w-5 h-5" />
-        </Link>
+function UserCard({ user }: { user: AdminUser | null }) {
+  const [leaving, setLeaving] = useState(false);
+  const { name, initials } = initialsOf(user);
+  return (
+    <div className="flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-xs font-bold text-white ring-2 ring-white/20" aria-hidden>
+        {initials}
+      </span>
+      <span className="min-w-0 flex-1 leading-tight">
+        <span className="block truncate text-sm font-semibold text-white">{name}</span>
+        {user?.email && <span className="block truncate text-xs text-blue-200/60">{user.email}</span>}
+      </span>
+      <button
+        type="button"
+        onClick={async () => {
+          setLeaving(true);
+          await logout();
+        }}
+        disabled={leaving}
+        title="Sign out"
+        aria-label="Sign out"
+        className="cursor-pointer rounded-lg p-2 text-blue-200/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+      >
+        <LogOut className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
 
-        <Link 
-          href="/schemes/new" 
-          title="Draft New Scheme"
-          className={`p-3 rounded-2xl transition-all duration-200 ${
-            isNewScheme 
-              ? "bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105" 
-              : "text-gray-400 hover:bg-gray-100 hover:text-gray-900"
-          }`}
-        >
-          <PlusCircle className="w-5 h-5" />
-        </Link>
+const SIDEBAR_BG = "bg-[radial-gradient(120%_80%_at_0%_0%,#0b3a75_0%,var(--mss-navy)_45%,var(--mss-navy-deep)_100%)]";
 
-        <Link 
-          href="/tickets" 
-          title="Bug Reports & Support Tickets"
-          className={`p-3 rounded-2xl transition-all duration-200 ${
-            isTickets 
-              ? "bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105" 
-              : "text-gray-400 hover:bg-gray-100 hover:text-gray-900"
-          }`}
-        >
-          <Bug className="w-5 h-5" />
-        </Link>
-
-        <Link 
-          href="/notifications" 
-          title="Announcements & Mobile Alerts"
-          className={`p-3 rounded-2xl transition-all duration-200 ${
-            isNotifications 
-              ? "bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105" 
-              : "text-gray-400 hover:bg-gray-100 hover:text-gray-900"
-          }`}
-        >
-          <Bell className="w-5 h-5" />
-        </Link>
-
-        <Link 
-          href="/releases" 
-          title="Catalog Releases & OTA Sync"
-          className={`p-3 rounded-2xl transition-all duration-200 ${
-            isReleases 
-              ? "bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105" 
-              : "text-gray-400 hover:bg-gray-100 hover:text-gray-900"
-          }`}
-        >
-          <Settings className="w-5 h-5" />
-        </Link>
-      </nav>
+/** Desktop sidebar (lg and up). */
+export function SidebarNav({ user }: { user: AdminUser | null }) {
+  const pathname = usePathname();
+  return (
+    <aside className={`z-20 hidden w-64 shrink-0 flex-col gap-8 px-4 py-6 lg:flex ${SIDEBAR_BG}`}>
+      <Brand />
+      <div className="flex-1 overflow-y-auto">
+        <NavLinks pathname={pathname} />
+      </div>
+      <UserCard user={user} />
     </aside>
   );
 }
 
-export function TopHeaderNav() {
+/** Top bar with a slide-out menu, below the lg breakpoint. */
+export function MobileNav({ user }: { user: AdminUser | null }) {
   const pathname = usePathname();
-  const [userEmail, setUserEmail] = useState<string>("admin@msme.gov.in");
-  const [userName, setUserName] = useState<string>("Admin User");
-  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    try {
-      const supabase = createClient();
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (user?.email) {
-          setUserEmail(user.email);
-          const metaName = user.user_metadata?.full_name || user.email.split("@")[0];
-          setUserName(metaName.charAt(0).toUpperCase() + metaName.slice(1));
-        }
-      }).catch(() => {
-        // Fallback default
-      });
-    } catch {
-      // Fallback default
-    }
-  }, []);
-
-  const initials = userName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .substring(0, 2)
-    .toUpperCase() || "AU";
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    await logout();
-  };
-
-  const isOverview = pathname === "/";
-  const isSchemes = pathname.startsWith("/schemes");
-  const isTickets = pathname.startsWith("/tickets");
-  const isNotifications = pathname.startsWith("/notifications");
-  const isReleases = pathname.startsWith("/releases");
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
 
   return (
-    <header className="h-16 sm:h-20 flex items-center justify-between px-3 sm:px-8 shrink-0 gap-3 border-b border-gray-100 md:border-none bg-white md:bg-transparent">
-      {/* Mobile Logo on small screens */}
-      <Link href="/" className="md:hidden w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center text-white font-extrabold text-base shadow-sm shrink-0">
-        A
-      </Link>
-
-      {/* Pill Navigation Bar with Dynamic Active States (Scrollable on phone width) */}
-      <div className="overflow-x-auto no-scrollbar py-1 max-w-full">
-        <div className="bg-white rounded-full p-1 sm:p-1.5 shadow-sm border border-gray-100 flex items-center gap-1 shrink-0">
-          <Link 
-            href="/" 
-            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
-              isOverview 
-                ? "bg-orange-500 text-white shadow-sm shadow-orange-500/20" 
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            Overview
-          </Link>
-
-          <Link 
-            href="/schemes" 
-            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap ${
-              isSchemes 
-                ? "bg-orange-500 text-white shadow-sm shadow-orange-500/20" 
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            Schemes
-          </Link>
-
-          <Link 
-            href="/tickets" 
-            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap ${
-              isTickets 
-                ? "bg-orange-500 text-white shadow-sm shadow-orange-500/20" 
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            Bug Reports
-          </Link>
-
-          <Link 
-            href="/notifications" 
-            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap ${
-              isNotifications 
-                ? "bg-orange-500 text-white shadow-sm shadow-orange-500/20" 
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            Announcements
-          </Link>
-
-          <Link 
-            href="/releases" 
-            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap ${
-              isReleases 
-                ? "bg-orange-500 text-white shadow-sm shadow-orange-500/20" 
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            Releases
-          </Link>
-        </div>
-      </div>
-
-      {/* Right Controls / Admin Profile */}
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        <Link href="/notifications" className="bg-white rounded-full p-2 sm:p-2.5 shadow-sm border border-gray-100 text-gray-500 hover:text-orange-600 transition-colors" title="Announcements & Alerts">
-          <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
-        </Link>
-        <div className="bg-white rounded-full pl-1.5 sm:pl-2 pr-2.5 sm:pr-3 py-1 sm:py-1.5 shadow-sm border border-gray-100 flex items-center gap-2 sm:gap-3">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs border border-orange-200 shrink-0">
-            {initials}
+    <>
+      <header className={`flex h-16 shrink-0 items-center justify-between px-4 lg:hidden ${SIDEBAR_BG}`}>
+        <Brand />
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Open menu"
+          aria-expanded={open}
+          className="rounded-xl p-2 text-white transition-colors hover:bg-white/10"
+        >
+          <Menu className="h-6 w-6" />
+        </button>
+      </header>
+      {open && (
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+          <button type="button" aria-label="Close menu" className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <div className={`mss-fade-up absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col gap-8 px-4 py-6 shadow-2xl ${SIDEBAR_BG}`}>
+            <div className="flex items-center justify-between">
+              <Brand onNavigate={() => setOpen(false)} />
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close menu" className="rounded-xl p-2 text-blue-100 hover:bg-white/10">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <NavLinks pathname={pathname} onNavigate={() => setOpen(false)} />
+            </div>
+            <UserCard user={user} />
           </div>
-          <div className="hidden sm:flex flex-col">
-            <span className="text-sm font-semibold text-gray-900 leading-tight">{userName}</span>
-            <span className="text-xs text-gray-500 leading-tight font-mono">{userEmail}</span>
-          </div>
-          <button
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            title="Sign out of Admin Portal"
-            className="p-1 sm:p-1.5 rounded-full text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          </button>
         </div>
-      </div>
-    </header>
+      )}
+    </>
   );
 }

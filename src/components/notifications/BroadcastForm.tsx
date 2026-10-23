@@ -1,268 +1,178 @@
 "use client";
 
-import { useState } from "react";
-import { Send, Bell, Sparkles, Check, AlertCircle, Smartphone } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { STATES } from "@/lib/schema/scheme";
-import { dispatchBroadcastNotification, NotificationType } from "@/app/notifications/actions";
+import { useMemo, useState, useTransition } from "react";
+import { broadcastNotification } from "@/app/notifications/actions";
+import { ConfirmBar, Notice, Panel, btn, field } from "@/components/admin/ui";
+import { BROADCAST_LANGUAGES, NOTIFICATION_TYPES, STATES } from "@/lib/mss/types";
+import { BroadcastProgressCard } from "./BroadcastProgressCard";
 
-const NOTIFICATION_TYPES: { id: NotificationType; label: string; description: string; badgeColor: string }[] = [
-  {
-    id: "new_schemes",
-    label: "New Scheme Alert",
-    description: "Alert users about newly added central/state schemes",
-    badgeColor: "bg-emerald-100 text-emerald-800",
-  },
-  {
-    id: "reminders",
-    label: "Deadline Reminder",
-    description: "Upcoming subsidy or financial year intake cutoffs",
-    badgeColor: "bg-amber-100 text-amber-800",
-  },
-  {
-    id: "updates",
-    label: "Policy & Guideline Update",
-    description: "Eligibility amendments or revised subsidy rates",
-    badgeColor: "bg-blue-100 text-blue-800",
-  },
-  {
-    id: "profile",
-    label: "Profile & Udyam Notice",
-    description: "Prompt users to update business stage or documents",
-    badgeColor: "bg-purple-100 text-purple-800",
-  },
-];
+const newKey = () => crypto.randomUUID();
 
-export function BroadcastForm() {
+/** Send one notification to all users, or to the users in some states/languages. */
+export function BroadcastForm({ initialBroadcastId, supported }: { initialBroadcastId?: string; supported: boolean }) {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
-  const [notificationType, setNotificationType] = useState<NotificationType>("new_schemes");
-  const [targetState, setTargetState] = useState("All India");
-  const [targetGender, setTargetGender] = useState("All");
+  const [type, setType] = useState("new_schemes");
+  const [everyone, setEveryone] = useState(true);
+  const [states, setStates] = useState<Set<string>>(new Set());
+  const [languages, setLanguages] = useState<Set<string>>(new Set());
+  const [stateFilter, setStateFilter] = useState("");
+  // One key per campaign: a retry after a timeout replays instead of sending twice.
+  const [campaignKey, setCampaignKey] = useState(newKey);
+  const [result, setResult] = useState<{ tone: "error" | "success"; text: string } | null>(null);
+  const [tracking, setTracking] = useState<string | undefined>(initialBroadcastId);
+  const [pending, start] = useTransition();
+  const [confirming, setConfirming] = useState(false);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const shownStates = useMemo(() => {
+    const q = stateFilter.trim().toLowerCase();
+    return q ? STATES.filter((s) => s.name.toLowerCase().includes(q) || s.code === q) : STATES;
+  }, [stateFilter]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || !message.trim()) {
-      setStatusMsg({ type: "error", text: "Please enter both a title and message." });
-      return;
-    }
+  const languageNames = [...languages].map((l) => BROADCAST_LANGUAGES.find((x) => x.value === l)?.label).join(" or ");
+  const audienceText = everyone
+    ? "all users"
+    : states.size || languages.size
+      ? `users${states.size ? ` in ${states.size === 1 ? STATES.find((s) => states.has(s.code))?.name : `${states.size} states`}` : ""}${
+          languages.size ? ` who use the app in ${languageNames}` : ""
+        }`
+      : "nobody yet";
 
-    setIsSubmitting(true);
-    setStatusMsg(null);
-
-    const res = await dispatchBroadcastNotification({
-      title: title.trim(),
-      message: message.trim(),
-      notificationType,
-      targetState,
-      targetGender,
-    });
-
-    setIsSubmitting(false);
-
-    if (res.success) {
-      setStatusMsg({
-        type: "success",
-        text: `Broadcast delivered successfully to ${res.recipientsCount} registered mobile user(s)!`,
-      });
-      setTitle("");
-      setMessage("");
-    } else {
-      setStatusMsg({
-        type: "error",
-        text: res.error || "Failed to dispatch notification.",
-      });
-    }
+  const toggle = (set: Set<string>, value: string, update: (s: Set<string>) => void) => {
+    const next = new Set(set);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    update(next);
   };
 
-  const selectedTypeObj = NOTIFICATION_TYPES.find((t) => t.id === notificationType);
+  // Any edit to the content or audience is a new campaign.
+  const edited = <T,>(set: (v: T) => void) => (v: T) => {
+    set(v);
+    setCampaignKey(newKey());
+    setConfirming(false);
+  };
+
+  function send(e: React.FormEvent) {
+    e.preventDefault();
+    setResult(null);
+    if (!everyone && !states.size && !languages.size) {
+      return setResult({ tone: "error", text: "Choose at least one state or language, or send to everyone." });
+    }
+    setConfirming(true);
+  }
+
+  function confirmSend() {
+    setConfirming(false);
+    start(async () => {
+      const res = await broadcastNotification({
+        title,
+        message,
+        type,
+        states: everyone ? [] : [...states],
+        languages: everyone ? [] : [...languages],
+        campaignKey,
+      });
+      if (!res.ok) return setResult({ tone: "error", text: res.error });
+      setResult({
+        tone: "success",
+        text: `Queued for ${res.data.recipients.toLocaleString("en-IN")} user(s). Each gets it in the app inbox, and as a phone notification on registered devices.`,
+      });
+      setTracking(res.data.broadcast_id);
+      setTitle("");
+      setMessage("");
+      setCampaignKey(newKey());
+    });
+  }
 
   return (
-    <Card className="border-none shadow-[0px_10px_40px_rgba(0,0,0,0.04)] bg-white rounded-3xl overflow-hidden">
-      <CardHeader className="border-b border-gray-100 pb-6 px-8 pt-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Send className="w-5 h-5 text-orange-500" /> Dispatch Mobile Notification
-            </CardTitle>
-            <p className="text-sm text-gray-500 mt-1">
-              Broadcast push notifications directly to the Flutter app&apos;s live notification feed.
-            </p>
+    <div className="space-y-5">
+      {tracking && <BroadcastProgressCard key={tracking} broadcastId={tracking} />}
+      <Panel title="Send to many users">
+        <form onSubmit={send} className="space-y-4">
+          {!supported && <Notice tone="warn">This MSS server doesn&apos;t support notification broadcasts yet (it needs the API update with migration 020). Ask the backend developer to deploy it.</Notice>}
+          {result && <Notice tone={result.tone}>{result.text}</Notice>}
+          <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-gray-700">Title</span>
+              <input className={field} value={title} maxLength={200} onChange={(e) => edited(setTitle)(e.target.value)} required />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-gray-700">Type</span>
+              <select className={field} value={type} onChange={(e) => edited(setType)(e.target.value)}>
+                {NOTIFICATION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </label>
           </div>
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-600 border border-orange-200">
-            Realtime Stream
-          </span>
-        </div>
-      </CardHeader>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-gray-700">Message</span>
+            <textarea className={field} rows={4} value={message} maxLength={5000} onChange={(e) => edited(setMessage)(e.target.value)} required />
+            <span className="block text-xs text-gray-400">{message.length}/5000 · plain text</span>
+          </label>
 
-      <CardContent className="p-8">
-        {statusMsg && (
-          <div
-            className={`mb-6 p-4 rounded-2xl text-sm flex items-center gap-3 ${
-              statusMsg.type === "success"
-                ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
-                : "bg-rose-50 border border-rose-200 text-rose-800"
-            }`}
-          >
-            {statusMsg.type === "success" ? (
-              <Check className="w-5 h-5 text-emerald-600 shrink-0" />
-            ) : (
-              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
-            )}
-            <p className="font-medium">{statusMsg.text}</p>
-          </div>
-        )}
+          <fieldset className="space-y-3">
+            <legend className="text-sm font-medium text-gray-700">Audience</legend>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <label className="flex items-center gap-2">
+                <input type="radio" name="audience" className="accent-blue-600" checked={everyone} onChange={() => edited(setEveryone)(true)} />
+                Everyone
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="radio" name="audience" className="accent-blue-600" checked={!everyone} onChange={() => edited(setEveryone)(false)} />
+                Only some states and/or languages
+              </label>
+            </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Notification Category */}
-          <div className="space-y-2">
-            <Label className="text-gray-700 font-semibold block">Notification Category</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {NOTIFICATION_TYPES.map((t) => {
-                const isSelected = notificationType === t.id;
-                return (
-                  <div
-                    key={t.id}
-                    onClick={() => setNotificationType(t.id)}
-                    className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                      isSelected
-                        ? "border-orange-500 bg-orange-50/50 shadow-sm"
-                        : "border-gray-200 bg-white hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-gray-900">{t.label}</span>
-                      <span
-                        className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                          isSelected ? "bg-orange-500 border-orange-500" : "border-gray-300"
-                        }`}
-                      />
+            {!everyone && (
+              <div className="space-y-4 rounded-2xl border border-gray-100 bg-gray-50/60 p-4">
+                <div>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-gray-700">States {states.size ? `(${states.size})` : "(any)"}</span>
+                    <div className="flex items-center gap-2">
+                      <input className={`${field} h-9 w-48`} placeholder="Filter states" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} aria-label="Filter states" />
+                      {states.size > 0 && (
+                        <button type="button" className="text-xs font-semibold text-blue-700" onClick={() => edited(setStates)(new Set())}>Clear</button>
+                      )}
                     </div>
-                    <p className="text-[11px] text-gray-500 mt-1 line-clamp-2">{t.description}</p>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Title & Body */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="notif-title" className="text-gray-700 font-semibold">
-                Announcement Title <span className="text-rose-500">*</span>
-              </Label>
-              <Input
-                id="notif-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. New 35% Capital Subsidy Scheme Open for Women Entrepreneurs"
-                className="h-11 rounded-xl bg-gray-50/70 border-gray-200"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notif-message" className="text-gray-700 font-semibold">
-                Message Body <span className="text-rose-500">*</span>
-              </Label>
-              <Textarea
-                id="notif-message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={3}
-                placeholder="Provide clear details, eligibility pointers, or application deadlines for MSME owners..."
-                className="rounded-xl bg-gray-50/70 border-gray-200 resize-none"
-              />
-            </div>
-          </div>
-
-          {/* Demographic Targeting */}
-          <div className="p-4 rounded-2xl bg-gray-50/80 border border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="target-state" className="text-xs font-semibold text-gray-700">
-                Geographic Scope (Target State)
-              </Label>
-              <select
-                id="target-state"
-                value={targetState}
-                onChange={(e) => setTargetState(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-              >
-                {STATES.map((st) => (
-                  <option key={st} value={st}>
-                    {st}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="target-gender" className="text-xs font-semibold text-gray-700">
-                Demographic Filter (Gender)
-              </Label>
-              <select
-                id="target-gender"
-                value={targetGender}
-                onChange={(e) => setTargetGender(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-              >
-                <option value="All">All Registered Users</option>
-                <option value="Female">Women Business Owners Only</option>
-                <option value="Male">Male Entrepreneurs</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Live Mobile Notification Preview */}
-          <div className="border border-orange-200/80 rounded-2xl p-4 bg-gradient-to-br from-orange-50/30 to-amber-50/20">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-orange-600 flex items-center gap-1.5">
-                <Smartphone className="w-3.5 h-3.5" /> Flutter Mobile Feed Preview
-              </span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${selectedTypeObj?.badgeColor}`}>
-                {selectedTypeObj?.label}
-              </span>
-            </div>
-
-            <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex gap-3 items-start">
-              <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 mt-0.5">
-                <Bell className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-bold text-gray-900 leading-tight">
-                  {title || "Notification headline appears here"}
-                </h4>
-                <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                  {message || "The detailed announcement message body will be displayed here for the mobile app user."}
+                  <div className="grid max-h-56 grid-cols-1 gap-1 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
+                    {shownStates.map((s) => (
+                      <label key={s.code} className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm hover:bg-white">
+                        <input type="checkbox" className="accent-blue-600" checked={states.has(s.code)} onChange={() => toggle(states, s.code, edited(setStates))} />
+                        {s.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <span className="mb-2 block text-sm font-medium text-gray-700">App language {languages.size ? `(${languages.size})` : "(any)"}</span>
+                  <div className="flex flex-wrap gap-4">
+                    {BROADCAST_LANGUAGES.map((l) => (
+                      <label key={l.value} className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" className="accent-blue-600" checked={languages.has(l.value)} onChange={() => toggle(languages, l.value, edited(setLanguages))} />
+                        {l.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">
+                  A user matches if their profile is in any chosen state <em>and</em> uses any chosen language. Users without a completed
+                  profile only receive broadcasts sent to everyone.
                 </p>
-                <span className="text-[10px] text-gray-400 font-medium mt-1.5 block">Just now • {targetState}</span>
               </div>
-            </div>
-          </div>
+            )}
+          </fieldset>
 
-          <div className="flex justify-end pt-2">
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 h-11 px-8 font-semibold flex items-center gap-2"
-            >
-              {isSubmitting ? (
-                <>Dispatching to Users...</>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" /> Send Broadcast
-                </>
-              )}
-            </Button>
+          {confirming && (
+            <ConfirmBar confirmLabel={`Yes, send to ${audienceText}`} onConfirm={confirmSend} onCancel={() => setConfirming(false)} pending={pending}>
+              Send “{title.trim()}” to {audienceText}? This can&apos;t be undone.
+            </ConfirmBar>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
+            <span className="text-xs text-gray-500">Sends to {audienceText}. Limit: 5 broadcasts per hour (including “Notify users” on publish).</span>
+            <button type="submit" className={btn.primary} disabled={pending || !supported || confirming}>{pending ? "Sending…" : "Send broadcast"}</button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </Panel>
+    </div>
   );
 }

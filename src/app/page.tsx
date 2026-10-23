@@ -1,293 +1,282 @@
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { resolveSchemeCategory } from "@/lib/schema/scheme";
-import { getOverrides } from "@/lib/catalogOverrides";
-import { formatDate } from "@/lib/dateUtils";
+import { ArrowUpRight, Bell, CheckCircle2, Clock3, FileText, Layers, Rocket, Upload, Users, XCircle } from "lucide-react";
+import { describeError } from "@/lib/mss/api";
+import { MSS_API_BASE } from "@/lib/mss/config";
+import { catalogSummary } from "@/lib/mss/catalog";
+import { apiHealth, broadcastsSupported, latestRelease, listAllDrafts } from "@/lib/mss/schemes";
+import { agent } from "@/lib/status/checks";
+import { COLLECTIONS, collectionForId, draftName, type Draft } from "@/lib/mss/types";
+import { Notice, StatusBadge, btn, formatDate } from "@/components/admin/ui";
+import { Bars } from "@/components/dashboard/Bars";
+import { CountUp } from "@/components/dashboard/CountUp";
 
-export const revalidate = 0; // Disable caching
+export const dynamic = "force-dynamic";
+
+const IST = "Asia/Kolkata";
+const dayKey = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: IST }); // YYYY-MM-DD
+
+/** Count of draft activity (creations and updates) per day for the last [days] days, oldest first. */
+function activityByDay(drafts: Draft[], days: number) {
+  const counts = new Map<string, number>();
+  for (const d of drafts) {
+    for (const iso of new Set([d.created_at, d.updated_at])) {
+      if (!iso) continue;
+      const k = dayKey(new Date(iso));
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+  }
+  const out: { label: string; value: number; title: string }[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const day = new Date(Date.now() - i * 86_400_000);
+    out.push({
+      label: day.toLocaleDateString("en-IN", { day: "numeric", timeZone: IST }),
+      title: day.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: IST }),
+      value: counts.get(dayKey(day)) ?? 0,
+    });
+  }
+  return out;
+}
+
+function Card({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  return (
+    <section className={`mss-fade-up rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 ${className}`} style={{ animationDelay: `${delay}ms` }}>
+      {children}
+    </section>
+  );
+}
 
 export default async function DashboardPage() {
-  const supabaseAdmin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  // Fetch real scheme catalog data via hardened service RPC
-  let totalSchemes = 0;
-  let activePublished = 0;
-  let draftsPending = 0;
-  let recentSchemes: any[] = [];
-
+  const [health, release, notifyOn, catalog, server] = await Promise.all([
+    apiHealth(),
+    latestRelease().catch(() => null),
+    broadcastsSupported(),
+    catalogSummary(),
+    agent(),
+  ]);
+  let drafts: Draft[] = [];
+  let error: string | null = null;
   try {
-    const overrides = getOverrides();
-    const { data: searchData, error } = await supabaseAdmin.rpc('mss_search_data');
-    if (!error && Array.isArray(searchData) && searchData.length > 0) {
-      const allSchemes = searchData
-        .map((item: any) => {
-          const profile = item.search_record?.schemeSearchProfile || {};
-          const ov = overrides[item.scheme_id];
-          const nameEn = ov?.name_en || item.name_en || profile.name || item.scheme_id;
-
-          // Exclude test records and deleted items from dashboard stats
-          if (
-            ov?.isDeleted ||
-            nameEn.toLowerCase().includes("test scheme") ||
-            nameEn.toLowerCase().includes("autonomous e2e")
-          ) {
-            return null;
-          }
-
-          const defaultStatusRaw = (item.scheme_record?.identity?.status || 'active').toUpperCase();
-          let status = ov?.status || defaultStatusRaw;
-          if (status === 'ACTIVE') status = 'PUBLISHED';
-          else if (status === 'INACTIVE') status = 'DISABLED';
-
-          const rawCode = ov?.scheme_code || profile.schemeId || item.scheme_record?.identity?.code || item.scheme_id;
-          const schemeCode = (rawCode && !rawCode.includes("-"))
-            ? rawCode
-            : (rawCode ? `SCH${rawCode.replace(/-/g, "").slice(0, 6).toUpperCase()}` : "SCH000001");
-
-          const schemeType = resolveSchemeCategory(item.scheme_record, profile, ov);
-
-          return {
-            id: item.scheme_id,
-            scheme_code: schemeCode,
-            name_en: nameEn,
-            state: ov?.state || profile.districts?.[0] || 'All India',
-            scheme_type: schemeType,
-            status,
-            updated_at: item.scheme_record?.identity?.updated_at || new Date().toISOString(),
-          };
-        })
-        .filter(Boolean) as any[];
-
-      totalSchemes = allSchemes.length;
-      activePublished = allSchemes.filter((s: any) => s.status === 'PUBLISHED').length;
-      draftsPending = allSchemes.filter((s: any) => s.status === 'DRAFT').length;
-      recentSchemes = allSchemes.slice(0, 4);
-    } else {
-      // Direct query fallback from catalog.scheme
-      const { data: dbSchemes, error: dbError } = await supabaseAdmin
-        .schema('catalog')
-        .from('scheme')
-        .select('id, scheme_code, name_en, state, scheme_type, status, updated_at, record_json')
-        .order('updated_at', { ascending: false });
-
-      if (!dbError && Array.isArray(dbSchemes)) {
-        const filtered = dbSchemes.filter((s: any) => 
-          !s.name_en?.toLowerCase().includes("test scheme") &&
-          !s.name_en?.toLowerCase().includes("autonomous e2e")
-        );
-        totalSchemes = filtered.length;
-        activePublished = filtered.filter((s: any) => (s.status || '').toUpperCase() === 'PUBLISHED').length;
-        draftsPending = filtered.filter((s: any) => (s.status || '').toUpperCase() === 'DRAFT').length;
-        recentSchemes = filtered.slice(0, 4).map((s: any) => ({
-          id: s.id,
-          scheme_code: s.scheme_code || `SCH${s.id.slice(0, 6).toUpperCase()}`,
-          name_en: s.name_en,
-          state: s.state || 'All India',
-          scheme_type: resolveSchemeCategory(s.record_json, null, null, s.scheme_type),
-          status: s.status || 'DRAFT',
-          updated_at: s.updated_at || new Date().toISOString(),
-        }));
-      }
-    }
-  } catch (err) {
-    console.error("Dashboard metrics fetch error:", err);
+    drafts = await listAllDrafts();
+  } catch (e) {
+    error = describeError(e);
   }
 
-  // Fetch open bug reports / support tickets
-  let openTicketsCount = 0;
-  try {
-    const { count } = await supabaseAdmin
-      .from('support_tickets')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'open');
-    openTicketsCount = count || 0;
-  } catch (err) {
-    console.error("Failed to query open tickets count:", err);
-  }
+  const count = (s: string) => drafts.filter((d) => d.status === s).length;
+  const publishedIds = new Set(drafts.filter((d) => d.status === "published" && d.action === "upsert").map((d) => d.scheme_id));
+  const published = publishedIds.size;
+  const toReview = count("draft");
+  const approved = count("approved");
+  const recent = [...drafts].sort((a, b) => (b.updated_at ?? "").localeCompare(a.updated_at ?? "")).slice(0, 7);
+  const activity = activityByDay(drafts, 14);
+  const week = activity.slice(-7);
+  const apiUp = health?.status === "ok";
 
-  const schemeList = recentSchemes;
-  
+  // Live app catalogue (all published schemes), falling back to the workflow count.
+  const liveSchemes = catalog?.schemes ?? published;
+  const byCollection = COLLECTIONS.map((c) => ({
+    ...c,
+    n: catalog ? catalog.byCollection[c.value] : [...publishedIds].filter((id) => collectionForId(id) === c.value).length,
+  }));
+  const STATUS_TONE: Record<string, string> = {
+    active: "bg-emerald-100 text-emerald-800",
+    announced: "bg-blue-100 text-blue-800",
+    unknown: "bg-slate-200 text-slate-700",
+    closed: "bg-red-100 text-red-700",
+  };
+  const users = server.connected ? server.users : undefined;
+  const maxCollection = Math.max(1, ...byCollection.map((c) => c.n));
+
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-7xl space-y-6">
+      {/* Header */}
+      <div className="mss-fade-up flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-1">Dashboard</h1>
-          <p className="text-gray-500">Welcome back, Admin. Here is what is happening today.</p>
+          <p className="text-sm font-medium text-blue-700">MSME Schemes Search</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-500">Changes reach the app after they are approved and published.</p>
         </div>
-        <div className="flex gap-4">
-          <Link href="/schemes/new">
-            <Button className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 h-11 px-6 font-medium">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              Add New Scheme
-            </Button>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/schemes/upload" className={btn.secondary}>
+            <Upload className="h-4 w-4" /> Upload dataset
+          </Link>
+          <Link href="/schemes/new" className={`${btn.primary} rounded-full bg-[var(--mss-navy)] hover:bg-blue-800`}>
+            <FileText className="h-4 w-4" /> New scheme
           </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-none shadow-[0px_10px_40px_rgba(0,0,0,0.04)] bg-white rounded-3xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 pt-6 px-6">
-            <CardTitle className="text-sm font-medium text-gray-500">Total Schemes</CardTitle>
-            <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            </div>
-          </CardHeader>
-          <CardContent className="px-6 pb-6">
-            <div className="text-3xl font-bold text-gray-900">{totalSchemes || 0}</div>
-            <p className="text-xs text-green-500 font-medium mt-1">Live from database</p>
-          </CardContent>
-        </Card>
+      {error && <Notice tone="error">Could not load drafts: {error}</Notice>}
 
-        <Card className="border-none shadow-[0px_10px_40px_rgba(0,0,0,0.04)] bg-white rounded-3xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 pt-6 px-6">
-            <CardTitle className="text-sm font-medium text-gray-500">Active Published</CardTitle>
-            <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-green-500">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+      {/* Stat cards */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="mss-fade-up relative overflow-hidden rounded-3xl bg-[radial-gradient(120%_120%_at_0%_0%,#0b3a75_0%,var(--mss-navy)_55%,var(--mss-navy-deep)_100%)] p-5 text-white shadow-lg shadow-blue-950/20">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-blue-100/70">Schemes in the app</p>
+              <p className="mt-1 text-4xl font-semibold tracking-tight"><CountUp value={liveSchemes} /></p>
+              <p className="mt-1 text-xs text-blue-100/60">{catalog ? `live catalogue · ${catalog.release.release_version}` : "via the review workflow"}</p>
             </div>
-          </CardHeader>
-          <CardContent className="px-6 pb-6">
-            <div className="text-3xl font-bold text-gray-900">{activePublished || 0}</div>
-            <p className="text-xs text-gray-400 font-medium mt-1">Live in catalog</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-[0px_10px_40px_rgba(0,0,0,0.04)] bg-white rounded-3xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 pt-6 px-6">
-            <CardTitle className="text-sm font-medium text-gray-500">Drafts Pending</CardTitle>
-            <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center text-orange-500">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            <div className="w-24 shrink-0">
+              <Bars data={week} height={56} tone="dark" showLabels={false} />
             </div>
-          </CardHeader>
-          <CardContent className="px-6 pb-6">
-            <div className="text-3xl font-bold text-gray-900">{draftsPending || 0}</div>
-            <p className="text-xs text-orange-500 font-medium mt-1">Require review</p>
-          </CardContent>
-        </Card>
+          </div>
+          <div aria-hidden className="mss-float pointer-events-none absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-blue-500/20 blur-2xl" />
+        </section>
 
-        <Link href="/tickets" className="block group">
-          <Card className="border-none shadow-[0px_10px_40px_rgba(0,0,0,0.04)] bg-white rounded-3xl transition-all group-hover:shadow-[0px_10px_40px_rgba(239,68,68,0.1)]">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 pt-6 px-6">
-              <CardTitle className="text-sm font-medium text-gray-500 group-hover:text-gray-900 transition-colors">
-                Bug Reports
-              </CardTitle>
-              <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-500">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              </div>
-            </CardHeader>
-            <CardContent className="px-6 pb-6">
-              <div className="text-3xl font-bold text-gray-900">{openTicketsCount} Open</div>
-              <p className="text-xs text-rose-500 font-medium mt-1">Live from Flutter app</p>
-            </CardContent>
-          </Card>
+        <Link href="/status" className="mss-fade-up group rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-md" style={{ animationDelay: "60ms" }}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-slate-500">App users</p>
+            <Users className="h-4 w-4 text-blue-600" />
+          </div>
+          <p className="mt-1 text-4xl font-semibold tracking-tight text-slate-900">
+            {users?.total != null ? <CountUp value={users.total} /> : "—"}
+          </p>
+          <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
+            {users?.total != null ? `+${users.new_7d ?? 0} this week · ${users.active_sessions ?? "?"} signed in` : "connect the server agent"}
+            <ArrowUpRight className="h-3 w-3 opacity-0 transition group-hover:opacity-100" />
+          </p>
         </Link>
+
+        <Link href="/releases" className="mss-fade-up group rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-md" style={{ animationDelay: "120ms" }}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-slate-500">Drafts to review</p>
+            <Clock3 className="h-4 w-4 text-amber-500" />
+          </div>
+          <p className="mt-1 text-4xl font-semibold tracking-tight text-slate-900"><CountUp value={toReview} /></p>
+          <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
+            <CheckCircle2 className="h-3 w-3 text-blue-600" /> {approved} approved, ready to publish
+            <ArrowUpRight className="h-3 w-3 opacity-0 transition group-hover:opacity-100" />
+          </p>
+        </Link>
+
+        <Card delay={180}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-slate-500">Live release</p>
+            <Rocket className="h-4 w-4 text-[var(--mss-green)]" />
+          </div>
+          <p
+            title={release?.release_version}
+            className={`mt-1 truncate font-semibold tracking-tight text-slate-900 ${(release?.release_version.length ?? 0) > 6 ? "text-2xl leading-10" : "text-4xl"}`}
+          >
+            {release?.release_version ?? "—"}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">{release ? formatDate(release.published_at) : "none yet"}</p>
+        </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="col-span-2 border-none shadow-[0px_10px_40px_rgba(0,0,0,0.04)] bg-white rounded-3xl overflow-hidden">
-          <CardHeader className="border-b border-gray-100 pb-4 mb-4 px-6 pt-6 flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-bold text-gray-900">Recent Schemes</CardTitle>
-            <Link href="/schemes" className="text-xs font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-1">
-              View all schemes
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-            </Link>
-          </CardHeader>
-          <CardContent className="px-0 pb-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-gray-500 bg-gray-50/50 uppercase">
-                  <tr>
-                    <th className="px-6 py-3 font-medium">Scheme Name</th>
-                    <th className="px-6 py-3 font-medium">Category</th>
-                    <th className="px-6 py-3 font-medium">Status</th>
-                    <th className="px-6 py-3 font-medium">Date</th>
-                    <th className="px-6 py-3 font-medium text-right">Action</th>
+      {/* Activity + breakdown */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <Card delay={220}>
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">Review activity</h2>
+              <p className="text-xs text-slate-500">Scheme drafts created or updated per day</p>
+            </div>
+            <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white">14 days</span>
+          </div>
+          <Bars data={activity} height={180} />
+        </Card>
+
+        <section className="mss-fade-up rounded-3xl bg-gradient-to-br from-blue-50 to-sky-100/60 p-5 ring-1 ring-blue-100" style={{ animationDelay: "260ms" }}>
+          <div className="flex items-center gap-2 text-blue-900">
+            <Layers className="h-4 w-4" />
+            <h2 className="text-base font-semibold">By collection</h2>
+          </div>
+          <p className="mt-3 text-5xl font-semibold tracking-tight text-[var(--mss-navy)]">
+            <CountUp value={liveSchemes} />
+            <span className="ml-2 text-base font-medium text-blue-700/70">schemes live</span>
+          </p>
+          {catalog && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {Object.entries(catalog.byStatus)
+                .sort((a, b) => b[1] - a[1])
+                .map(([st, n]) => (
+                  <span key={st} className={`rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${STATUS_TONE[st] ?? STATUS_TONE.unknown}`}>
+                    {n} {st}
+                  </span>
+                ))}
+            </div>
+          )}
+          <ul className="mt-5 space-y-4">
+            {byCollection.map((c, i) => (
+              <li key={c.value}>
+                <div className="mb-1.5 flex justify-between text-sm">
+                  <span className="font-medium text-slate-700">{c.label}</span>
+                  <span className="font-semibold text-slate-900">{c.n}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-white">
+                  <div
+                    className="mss-grow-x h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-700"
+                    style={{ width: `${(c.n / maxCollection) * 100}%`, animationDelay: `${300 + i * 80}ms` }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      {/* Recent + system */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <Card delay={300} className="overflow-hidden p-0">
+          <div className="flex items-center justify-between px-5 pt-5">
+            <h2 className="text-base font-semibold text-slate-900">Recent changes</h2>
+            <Link href="/schemes" className="text-sm font-semibold text-blue-700 hover:underline">All schemes</Link>
+          </div>
+          {recent.length === 0 ? (
+            <p className="px-5 py-6 text-sm text-slate-500">No drafts yet. Start by uploading the 2026 datasets.</p>
+          ) : (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[560px] text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-slate-400">
+                    <th className="px-5 py-2 font-medium">Scheme</th>
+                    <th className="px-3 py-2 font-medium">Collection</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                    <th className="px-5 py-2 text-right font-medium">Updated</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {schemeList.map((scheme: any) => (
-                    <tr key={scheme.id} className="hover:bg-orange-50/20 transition-colors group">
-                      <td className="px-6 py-4">
-                        <Link href={`/schemes/${scheme.id}`} className="block group-hover:text-orange-600 transition-colors">
-                          <div className="font-semibold text-gray-900 group-hover:text-orange-600 line-clamp-1">{scheme.name_en}</div>
-                          <div className="text-xs text-gray-400 font-mono mt-0.5">{scheme.scheme_code}</div>
-                        </Link>
+                <tbody className="divide-y divide-slate-100">
+                  {recent.map((d) => (
+                    <tr key={d.id} className="transition-colors hover:bg-blue-50/40">
+                      <td className="max-w-[280px] px-5 py-3">
+                        <Link href={`/schemes/${d.id}`} className="block truncate font-medium text-slate-900 hover:text-blue-700">{draftName(d)}</Link>
+                        <span className="font-mono text-xs text-slate-400">{d.scheme_id}</span>
                       </td>
-                      <td className="px-6 py-4 text-gray-500">{scheme.scheme_type || 'N/A'}</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          scheme.status === 'PUBLISHED' ? 'bg-green-100 text-green-800' : 
-                          scheme.status === 'DRAFT' ? 'bg-orange-100 text-orange-800' : 
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {scheme.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-500 font-mono text-xs">{formatDate(scheme.updated_at)}</td>
-                      <td className="px-6 py-4 text-right">
-                        <Link href={`/schemes/${scheme.id}`}>
-                          <Button size="sm" className="h-8 px-3 rounded-lg bg-orange-50 hover:bg-orange-500 text-orange-700 hover:text-white border border-orange-200 text-xs font-semibold shadow-none transition-all">
-                            Edit →
-                          </Button>
-                        </Link>
-                      </td>
+                      <td className="px-3 py-3 text-slate-600">{COLLECTIONS.find((c) => c.value === collectionForId(d.scheme_id))?.label ?? "—"}</td>
+                      <td className="px-3 py-3"><StatusBadge status={d.status} action={d.action} /></td>
+                      <td className="whitespace-nowrap px-5 py-3 text-right text-xs text-slate-500">{formatDate(d.updated_at)}</td>
                     </tr>
                   ))}
-                  {schemeList.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                        No schemes found.
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
-          </CardContent>
+          )}
         </Card>
 
-        <Card className="border-none shadow-[0px_10px_40px_rgba(0,0,0,0.04)] bg-white rounded-3xl">
-          <CardHeader className="border-b border-gray-100 pb-4 mb-4 px-6 pt-6">
-            <CardTitle className="text-lg font-bold text-gray-900">Action Items</CardTitle>
-          </CardHeader>
-          <CardContent className="px-6 pb-6">
-            <div className="space-y-6">
-              <Link href="/tickets" className="flex gap-4 group cursor-pointer hover:bg-gray-50/80 p-2 rounded-2xl -mx-2 transition-colors">
-                <div className="w-10 h-10 rounded-full bg-rose-50 shrink-0 flex items-center justify-center text-rose-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
-                    Resolve {openTicketsCount} Bug Reports
-                  </h4>
-                  <p className="text-xs text-gray-500 mt-1">Directly submitted by citizens via Help &amp; Support.</p>
-                </div>
-              </Link>
-              <Link href="/schemes" className="flex gap-4 group cursor-pointer hover:bg-gray-50/80 p-2 rounded-2xl -mx-2 transition-colors">
-                <div className="w-10 h-10 rounded-full bg-orange-50 shrink-0 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">Review {draftsPending || 0} Drafts</h4>
-                  <p className="text-xs text-gray-500 mt-1">Pending approval from content team before publishing.</p>
-                </div>
-              </Link>
-              <Link href="/releases" className="flex gap-4 group cursor-pointer hover:bg-gray-50/80 p-2 rounded-2xl -mx-2 transition-colors">
-                <div className="w-10 h-10 rounded-full bg-blue-50 shrink-0 flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">Publish Catalog v1.34 &rarr;</h4>
-                  <p className="text-xs text-gray-500 mt-1">Manage OTA release packages and push updates to mobile devices.</p>
-                </div>
-              </Link>
+        <section className="mss-fade-up flex flex-col gap-4 rounded-3xl bg-[var(--mss-navy-deep)] p-5 text-white shadow-lg shadow-blue-950/20" style={{ animationDelay: "340ms" }}>
+          <h2 className="text-base font-semibold">System</h2>
+          <div className="flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10">
+            {apiUp ? <CheckCircle2 className="h-5 w-5 text-emerald-400" /> : <XCircle className="h-5 w-5 text-red-400" />}
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">MSS API {apiUp ? "online" : "unreachable"}</p>
+              <p className="truncate text-xs text-blue-100/60">
+                {MSS_API_BASE.replace("https://", "")}
+                {health && ` · db ${health.db} · v${health.version}`}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10">
+            <Bell className={`h-5 w-5 ${notifyOn ? "text-emerald-400" : "text-amber-400"}`} />
+            <div>
+              <p className="text-sm font-semibold">Notifications {notifyOn ? "ready" : "unavailable"}</p>
+              <p className="text-xs text-blue-100/60">{notifyOn ? "Broadcasts and Notify users on publish" : "Server update needed for broadcasts"}</p>
+            </div>
+          </div>
+          <Link href="/notifications" className="mt-auto inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--mss-navy)] transition hover:bg-blue-50">
+            <Bell className="h-4 w-4" /> Send a notification
+          </Link>
+        </section>
       </div>
     </div>
   );
