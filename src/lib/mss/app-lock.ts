@@ -9,13 +9,13 @@ export interface AppLockState {
 
 /** Current administrator app lock (admins and viewers). */
 export async function getAppLock(): Promise<AppLockState> {
-  return (await mssApi<AppLockState>("/v1/admin/app-lock")).data;
+  return (await mssApi<AppLockState>("/admin/app-lock")).data;
 }
 
 /** Lock or unlock the whole app (admins only; the API refuses viewers). */
 export async function setAppLock(locked: boolean, message: string | null): Promise<AppLockState> {
   return (
-    await mssApi<AppLockState>("/v1/admin/app-lock", {
+    await mssApi<AppLockState>("/admin/app-lock", {
       method: "PUT",
       body: locked && message ? { locked, message } : { locked },
     })
