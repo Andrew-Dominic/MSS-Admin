@@ -116,6 +116,8 @@ export function describeError(e: unknown): string {
     SCHEME_CATALOG_INVALID: "The resulting catalogue failed validation. Check the drafts.",
     SCHEME_CATALOG_TOO_LARGE: "The resulting catalogue is too large to publish.",
     INVALID_CREDENTIALS: "Wrong email or password.",
+    INVALID_APP_LOCK: "The lock message must be at most 500 characters of plain text.",
+    APP_LOCKED: "The app is locked and this account is not an admin.",
   };
   const detail = Array.isArray(e.details)
     ? e.details.map((d) => (typeof d === "object" ? Object.values(d as object).join(" ") : String(d))).join("; ")
