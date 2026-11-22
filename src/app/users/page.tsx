@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { Bell, Search, UserX } from "lucide-react";
+import { Ban, Bell, Search, UserX } from "lucide-react";
 import { Notice, PageHeader, btn, field, formatDate } from "@/components/admin/ui";
 import { CopyButton } from "@/components/admin/CopyButton";
 import { listUsers, type AppUser, type UserStatus } from "@/lib/status/users";
 import { STATES } from "@/lib/mss/types";
+import { isViewOnly } from "@/lib/mss/role";
+import { UserModeration } from "@/components/users/UserModeration";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +34,7 @@ const STATUS_TABS: { value: UserStatus; label: string }[] = [
   { value: "all", label: "All" },
   { value: "active", label: "Active" },
   { value: "deleted", label: "Deleted" },
+  { value: "banned", label: "Banned" },
 ];
 
 /** Whole days until [iso], never negative. */
@@ -49,13 +52,14 @@ export default async function UsersPage({
   const sp = await searchParams;
   const q = one(sp.q).trim().slice(0, 100);
   const page = Math.max(1, Number.parseInt(one(sp.page), 10) || 1);
-  const status: UserStatus = (["active", "deleted"] as const).find((s) => s === one(sp.status)) ?? "all";
+  const status: UserStatus = (["active", "deleted", "banned"] as const).find((s) => s === one(sp.status)) ?? "all";
   const result = await listUsers(q, PAGE, (page - 1) * PAGE, status);
+  const viewOnly = await isViewOnly();
   const pages = result.connected ? Math.max(1, Math.ceil(result.total / PAGE)) : 1;
   const query = (extra: Record<string, string>) =>
     `/users?${new URLSearchParams({ ...(q ? { q } : {}), ...(status !== "all" ? { status } : {}), ...extra })}`;
   const link = (p: number) => query({ page: String(p) });
-  const noun = status === "deleted" ? "deleted" : status === "active" ? "active" : q ? "matching" : "registered";
+  const noun = status === "banned" ? "banned" : status === "deleted" ? "deleted" : status === "active" ? "active" : q ? "matching" : "registered";
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -66,7 +70,7 @@ export default async function UsersPage({
 
       {result.connected && result.deletedSupported && (
         <nav aria-label="Filter users" className="mss-fade-up mb-4 flex flex-wrap gap-2">
-          {STATUS_TABS.map((t) => {
+          {STATUS_TABS.filter((t) => t.value !== "banned" || result.bannedSupported).map((t) => {
             const on = t.value === status;
             const href = `/users?${new URLSearchParams({ ...(q ? { q } : {}), ...(t.value !== "all" ? { status: t.value } : {}) })}`;
             return (
@@ -80,6 +84,7 @@ export default async function UsersPage({
               >
                 {t.label}
                 {t.value === "deleted" && result.deletedTotal != null && <span className="ml-1.5 opacity-70">{result.deletedTotal}</span>}
+                {t.value === "banned" && result.bannedTotal != null && <span className="ml-1.5 opacity-70">{result.bannedTotal}</span>}
               </Link>
             );
           })}
@@ -121,9 +126,11 @@ export default async function UsersPage({
                 {result.items.map((u) => {
                   const admin = (u.roles ?? []).includes("admin");
                   const deleted = Boolean(u.deleted_at);
+                  const banned = Boolean(u.banned_at);
+                  const isProtected = (u.roles ?? []).some((r) => r === "admin" || r === "viewer");
                   const left = daysLeft(u.purge_after);
                   return (
-                    <tr key={u.id} className={`align-top ${deleted ? "bg-red-50/40 text-slate-500" : "hover:bg-blue-50/30"}`}>
+                    <tr key={u.id} className={`align-top ${deleted || banned ? "bg-red-50/40 text-slate-500" : "hover:bg-blue-50/30"}`}>
                       <td className="px-4 py-3">
                         <div className="flex items-start gap-3">
                           {u.picture_url ? (
@@ -136,13 +143,21 @@ export default async function UsersPage({
                             <div className="flex flex-wrap items-center gap-1.5">
                               <span className="font-semibold text-slate-900">{u.name || u.profile_name || "—"}</span>
                               {admin && <Badge tone="blue">Admin</Badge>}
-                              {deleted && <Badge tone="red">Deleted</Badge>}
-                              {!deleted && u.restored_at && <Badge tone="green">Reactivated</Badge>}
+                              {(u.roles ?? []).includes("viewer") && <Badge tone="blue">View-only admin</Badge>}
+                              {banned && <Badge tone="red">Banned</Badge>}
+                              {deleted && <Badge tone="red">{u.removed_by_admin ? "Removed by admin" : "Deleted"}</Badge>}
+                              {banned && (
+                              <div className="mt-1 flex items-center gap-1 text-xs font-medium text-red-700">
+                                <Ban className="h-3.5 w-3.5" />
+                                Banned {formatDate(u.banned_at ?? null)}{u.ban_reason ? ` · ${u.ban_reason}` : ""}
+                              </div>
+                            )}
+                            {!deleted && u.restored_at && <Badge tone="green">Reactivated</Badge>}
                             </div>
                             {deleted && (
                               <div className="mt-1 flex items-center gap-1 text-xs font-medium text-red-700">
                                 <UserX className="h-3.5 w-3.5" />
-                                Deleted {formatDate(u.deleted_at ?? null)} · data removed {formatDate(u.purge_after ?? null)}
+                                {u.removed_by_admin ? "Removed" : "Deleted"} {formatDate(u.deleted_at ?? null)} · data removed {formatDate(u.purge_after ?? null)}
                                 {left != null && ` (${left} day${left === 1 ? "" : "s"} left)`}
                               </div>
                             )}
@@ -172,13 +187,20 @@ export default async function UsersPage({
                       <td className="px-4 py-3 text-center text-slate-700">{u.sessions ?? "—"}</td>
                       <td className="px-4 py-3 text-center text-slate-700">{u.devices ?? "—"}</td>
                       <td className="px-4 py-3">
-                        <div className="flex justify-end">
+                        <div className="flex flex-col items-end gap-1.5">
                           {deleted ? (
-                            <span className="text-xs text-slate-400">Signed out · can reactivate by signing in</span>
+                            <span className="text-xs text-slate-400">
+                              {u.removed_by_admin ? "Signed out · only an admin can restore" : "Signed out · can reactivate by signing in"}
+                            </span>
+                          ) : banned ? (
+                            <span className="text-xs text-slate-400">Signed out · cannot sign in</span>
                           ) : (
                             <Link href={`/notifications?user=${encodeURIComponent(u.id)}`} className={`${btn.secondary} px-3 py-1.5 text-xs`}>
                               <Bell className="h-3.5 w-3.5" /> Notify
                             </Link>
+                          )}
+                          {!viewOnly && !isProtected && result.bannedSupported && (
+                            <UserModeration userId={u.id} name={u.name || u.profile_name || "This user"} email={u.email} banned={banned} deleted={deleted} />
                           )}
                         </div>
                       </td>
@@ -186,7 +208,7 @@ export default async function UsersPage({
                   );
                 })}
                 {!result.items.length && (
-                  <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-500">{status === "deleted" ? "No deleted accounts waiting to be removed." : q ? "No users match this search." : "No users yet."}</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-500">{status === "banned" ? "No banned accounts." : status === "deleted" ? "No deleted accounts waiting to be removed." : q ? "No users match this search." : "No users yet."}</td></tr>
                 )}
               </tbody>
             </table>

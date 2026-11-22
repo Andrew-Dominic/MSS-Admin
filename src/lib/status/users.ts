@@ -26,9 +26,14 @@ export interface AppUser {
   purge_after?: string | null;
   /** Last time the user reactivated a deleted account. */
   restored_at?: string | null;
+  /** True when an administrator removed the account (the owner cannot restore it). */
+  removed_by_admin?: boolean | null;
+  /** Set while the account is banned (API migration 028). */
+  banned_at?: string | null;
+  ban_reason?: string | null;
 }
 
-export type UserStatus = "all" | "active" | "deleted";
+export type UserStatus = "all" | "active" | "deleted" | "banned";
 
 export type UsersResult =
   | {
@@ -38,6 +43,9 @@ export type UsersResult =
       /** False until the agent can read deleted accounts (API migration 021 + grant). */
       deletedSupported: boolean;
       deletedTotal: number | null;
+      /** False until the agent can read bans (API migration 028 + grant). */
+      bannedSupported: boolean;
+      bannedTotal: number | null;
     }
   | { connected: false; error: string };
 
@@ -62,13 +70,15 @@ export async function listUsers(q: string, limit: number, offset: number, status
       signal: AbortSignal.timeout(12_000),
     });
     if (!res.ok) return { connected: false, error: `The server agent answered HTTP ${res.status}.` };
-    const body = (await res.json()) as { total?: number; items?: AppUser[]; deleted_supported?: boolean; deleted_total?: number | null };
+    const body = (await res.json()) as { total?: number; items?: AppUser[]; deleted_supported?: boolean; deleted_total?: number | null; banned_supported?: boolean; banned_total?: number | null };
     return {
       connected: true,
       total: body.total ?? 0,
       items: Array.isArray(body.items) ? body.items : [],
       deletedSupported: body.deleted_supported === true,
       deletedTotal: body.deleted_total ?? null,
+      bannedSupported: body.banned_supported === true,
+      bannedTotal: body.banned_total ?? null,
     };
   } catch (e) {
     return { connected: false, error: `The server agent could not be reached (${(e as Error).name}).` };
