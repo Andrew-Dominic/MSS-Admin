@@ -1,7 +1,9 @@
 import "server-only";
 import { gunzipSync } from "node:zlib";
 import { apiUrl } from "./config";
-import { collectionForId, type Collection, type SchemeRecord } from "./types";
+import { recordFromBundle } from "./fromBundle";
+import { listAllDrafts } from "./schemes";
+import { collectionForId, type Collection, type Draft, type SchemeRecord } from "./types";
 
 /** GET /v1/catalog/current: the published app catalogue (public). */
 export interface CatalogCurrent {
@@ -26,6 +28,11 @@ export interface CatalogScheme {
   state?: string;
   category?: string;
   source: SchemeRecord | null;
+  /**
+   * Where `source` came from: the bundle itself, the scheme's latest published
+   * draft (exact), or rebuilt from the app catalogue (close, see fromBundle.ts).
+   */
+  sourceFrom?: "bundle" | "draft" | "catalogue";
 }
 
 export interface CatalogSummary {
@@ -41,7 +48,7 @@ export interface CatalogSummary {
   items: CatalogScheme[];
 }
 
-let cache: { tag: string; summary: CatalogSummary } | null = null;
+let cache: { tag: string; summary: CatalogSummary; projections: Map<string, unknown> } | null = null;
 
 export async function catalogCurrent(): Promise<CatalogCurrent | null> {
   try {
@@ -73,6 +80,7 @@ export async function catalogSummary(): Promise<CatalogSummary | null> {
   const byStatus: Record<string, number> = {};
   const localized = { hi: 0, ta: 0 };
   const list: CatalogScheme[] = [];
+  const projections = new Map<string, unknown>();
   let schemes = release.record_counts["scheme_catalog.json"] ?? 0;
 
   try {
@@ -97,6 +105,7 @@ export async function catalogSummary(): Promise<CatalogSummary | null> {
         if (s.localization?.ta?.name) localized.ta++;
         const id = s.identity?.id ?? "";
         const src = s.source ?? null;
+        projections.set(id, s);
         list.push({
           id,
           name: s.identity?.name || (src?.name?.en ?? "") || id,
@@ -108,6 +117,7 @@ export async function catalogSummary(): Promise<CatalogSummary | null> {
           state: src?.state,
           category: typeof src?.category === "string" ? src.category : undefined,
           source: src,
+          sourceFrom: src ? "bundle" : undefined,
         });
       }
     }
@@ -122,12 +132,39 @@ export async function catalogSummary(): Promise<CatalogSummary | null> {
 
   list.sort((a, b) => a.id.localeCompare(b.id));
   const summary: CatalogSummary = { release, schemes, byCollection, byStatus, localized, others, items: list };
-  cache = { tag: release.release_version, summary };
+  cache = { tag: release.release_version, summary, projections };
   return summary;
 }
 
-/** One live scheme by id (for editing and change summaries). */
-export async function catalogScheme(id: string): Promise<CatalogScheme | null> {
+/** The record of the scheme's most recent published draft: exactly what went live. */
+function publishedDraftRecord(drafts: Draft[], id: string): SchemeRecord | null {
+  const published = drafts
+    .filter((d) => d.scheme_id === id && d.status === "published" && d.action === "upsert" && d.payload?.raw)
+    .sort((a, b) => (b.updated_at ?? "").localeCompare(a.updated_at ?? "") || b.version - a.version);
+  return published[0]?.payload?.raw ?? null;
+}
+
+/**
+ * One live scheme by id, with its editable record (for editing and change
+ * summaries). The bundle has carried no `source` records since the unified
+ * release workflow, so the record comes from the latest published draft or,
+ * for schemes that never had a draft, is rebuilt from the app catalogue.
+ * Pass the drafts if the caller already listed them (the list is rate limited).
+ */
+export async function catalogScheme(id: string, drafts?: Draft[]): Promise<CatalogScheme | null> {
   const summary = await catalogSummary();
-  return summary?.items.find((s) => s.id === id) ?? null;
+  const item = summary?.items.find((s) => s.id === id) ?? null;
+  if (!item || item.source) return item;
+  const all = drafts ?? (await listAllDrafts().catch(() => []));
+  const fromDraft = publishedDraftRecord(all, id);
+  const source = fromDraft ?? recordFromBundle(cache?.projections.get(id));
+  if (!source) return item;
+  return {
+    ...item,
+    level: item.level ?? source.level,
+    state: item.state ?? source.state,
+    category: item.category ?? (typeof source.category === "string" ? source.category : undefined),
+    source,
+    sourceFrom: fromDraft ? "draft" : "catalogue",
+  };
 }

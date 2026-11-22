@@ -15,7 +15,8 @@ export default async function CatalogSchemePage({ params }: { params: Promise<{ 
       <ArrowLeft className="h-4 w-4" /> Schemes
     </Link>
   );
-  const [scheme, drafts] = await Promise.all([catalogScheme(id), listAllDrafts().catch(() => [])]);
+  const drafts = await listAllDrafts().catch(() => []);
+  const scheme = await catalogScheme(id, drafts);
   if (!scheme?.source) {
     return <div className="mx-auto max-w-5xl">{back}<Notice tone="error">No live scheme has the ID {id}.</Notice></div>;
   }
@@ -32,10 +33,17 @@ export default async function CatalogSchemePage({ params }: { params: Promise<{ 
         </Notice>
       ) : (
         <>
-          <div className="mb-4">
+          <div className="mb-4 space-y-3">
             <Notice tone="info">
               Edit below and save. That creates a draft; on the next screen you can approve, publish and notify users in one step.
             </Notice>
+            {scheme.sourceFrom === "catalogue" && (
+              <Notice tone="warn">
+                This scheme was never edited here, so the form is filled from the app&apos;s catalogue. Check the documents
+                and the apply link before saving: document groups in Hindi and Tamil, and how the documents and apply link
+                were sourced, are not in the catalogue and are saved as shown here.
+              </Notice>
+            )}
           </div>
           <SchemeEditor initial={scheme.source} initialCollection={scheme.collection} lockIdentity />
         </>
