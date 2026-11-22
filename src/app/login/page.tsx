@@ -1,86 +1,68 @@
-import { login } from './actions'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
+import Image from "next/image";
+import { ShieldCheck } from "lucide-react";
+import { DitherCanvas } from "@/components/login/DitherCanvas";
+import { SignInButton } from "@/components/login/SignInButton";
+import { TurnstileWidget } from "@/components/login/TurnstileWidget";
+import { TURNSTILE_ACTION, turnstileSiteKey } from "@/lib/mss/turnstile";
+import { login } from "./actions";
 
-export default async function LoginPage({ 
-  searchParams 
-}: { 
-  searchParams: Promise<{ error?: string; redirectTo?: string }> 
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; redirectTo?: string }>;
 }) {
   const params = await searchParams;
   const error = params?.error;
-  const redirectTo = params?.redirectTo || '/';
+  const raw = params?.redirectTo || "/";
+  const redirectTo = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/";
+  const siteKey = turnstileSiteKey();
+
+  const field =
+    "h-11 w-full rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15";
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-[#F4F7F9] relative overflow-hidden font-sans p-4">
-      {/* Background decorative elements */}
-      <div className="absolute top-[-10%] left-[-10%] h-[40%] w-[40%] rounded-full bg-orange-500/10 blur-[120px]" />
-      <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-blue-500/10 blur-[120px]" />
+    <div className="grid min-h-screen w-full bg-white md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+          {/* Form side: a compact card on a soft background */}
+          <div className="flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50/60 px-4 py-10 sm:px-8">
+          <div className="mss-fade-up w-full max-w-sm rounded-3xl bg-white p-7 shadow-[0_20px_50px_-20px_rgba(1,40,79,0.25)] ring-1 ring-slate-200/70 sm:p-9">
+            <Image src="/brand/mss-logo.webp" alt="MSS" width={72} height={68} priority unoptimized className="mb-6 h-auto w-[72px]" />
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Sign In</h1>
+            <p className="mt-2 font-mono text-[13px] text-slate-500">Continue to the MSS admin console</p>
 
-      <Card className="z-10 w-full max-w-md border-none bg-white/95 backdrop-blur-xl shadow-[0px_20px_60px_rgba(0,0,0,0.08)] rounded-3xl">
-        <CardHeader className="space-y-2 text-center pb-8 pt-10">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500 mb-4 shadow-lg shadow-orange-500/20">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 text-white"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <form action={login} className="mt-8 space-y-5">
+              <input type="hidden" name="redirectTo" value={redirectTo} />
+              {error && (
+                <div role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                  {error}
+                </div>
+              )}
+              <label className="block space-y-2">
+                <span className="font-mono text-xs font-semibold text-slate-700">Email</span>
+                <input name="email" type="email" required autoComplete="username" placeholder="Enter your email" className={field} />
+              </label>
+              <label className="block space-y-2">
+                <span className="font-mono text-xs font-semibold text-slate-700">Password</span>
+                <input name="password" type="password" required autoComplete="current-password" placeholder="Enter your password" className={field} />
+              </label>
+              {siteKey && <TurnstileWidget siteKey={siteKey} action={TURNSTILE_ACTION} />}
+              <SignInButton />
+            </form>
+
+            <p className="mt-8 flex items-center justify-center gap-2 text-center font-mono text-xs text-slate-400">
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+              Admins only · access is granted by the server administrator
+            </p>
           </div>
-          <CardTitle className="text-3xl font-bold tracking-tight text-gray-900">
-            Admin Portal
-          </CardTitle>
-          <CardDescription className="text-gray-500 font-medium">
-            Sign in to manage MSME Schemes
-          </CardDescription>
-        </CardHeader>
-        
-        <form action={login}>
-          <input type="hidden" name="redirectTo" value={redirectTo} />
-          {/* Hidden submit button to guarantee Enter key triggers form submission in all browsers */}
-          <button type="submit" className="hidden" tabIndex={-1} aria-hidden="true" />
-          
-          <CardContent className="space-y-6 px-10">
-            {error && (
-              <div className="rounded-xl bg-red-50 p-4 text-sm text-red-600 border border-red-100 text-center font-medium">
-                {error}
-              </div>
-            )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-700 font-semibold text-sm">Email Address</Label>
-              <Input 
-                id="email" 
-                name="email" 
-                type="email" 
-                placeholder="admin@test.com"
-                required 
-                className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-orange-500 rounded-xl h-12 px-4 shadow-sm" 
-              />
+          </div>
+
+          {/* Animated dither side: reacts to the pointer */}
+          <div className="relative hidden overflow-hidden bg-white md:block">
+            <DitherCanvas className="absolute inset-0 cursor-crosshair" />
+            <div className="pointer-events-none absolute bottom-8 right-8 rounded-2xl bg-white/80 px-4 py-3 text-right shadow-lg ring-1 ring-slate-100 backdrop-blur">
+              <p className="text-sm font-semibold text-[var(--mss-navy)]">MSME Schemes Search</p>
+              <p className="text-xs text-slate-500">Government schemes for every Indian business</p>
             </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-gray-700 font-semibold text-sm">Password</Label>
-              </div>
-              <Input 
-                id="password" 
-                name="password" 
-                type="password" 
-                placeholder="••••••••" 
-                required 
-                className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-orange-500 rounded-xl h-12 px-4 shadow-sm" 
-              />
-            </div>
-          </CardContent>
-          
-          <CardFooter className="pt-4 pb-10 px-10">
-            <Button 
-              type="submit" 
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold h-12 rounded-xl transition-all shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30 cursor-pointer"
-            >
-              Sign In
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+          </div>
     </div>
-  )
+  );
 }

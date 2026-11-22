@@ -6,14 +6,14 @@ export default function SchemesLoading() {
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <div className="h-8 w-40 bg-gray-200 rounded-xl animate-pulse" />
-            <div className="flex items-center gap-2 px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-xs font-medium border border-orange-100/80 shadow-xs">
-              <div className="w-3.5 h-3.5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+            <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-100/80 shadow-xs">
+              <div className="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
               <span>Loading schemes...</span>
             </div>
           </div>
           <div className="h-4 w-72 bg-gray-200/70 rounded-lg animate-pulse" />
         </div>
-        <div className="h-11 w-36 bg-orange-200 rounded-xl animate-pulse" />
+        <div className="h-11 w-36 bg-blue-200 rounded-xl animate-pulse" />
       </div>
 
       {/* Main Table Card Skeleton */}
@@ -56,7 +56,7 @@ export default function SchemesLoading() {
                 <div className="h-6 bg-gray-100 rounded-full w-20" />
               </div>
               <div className="col-span-2">
-                <div className="h-6 bg-orange-100/60 rounded-full w-24" />
+                <div className="h-6 bg-blue-100/60 rounded-full w-24" />
               </div>
               <div className="col-span-1 flex justify-end">
                 <div className="h-8 w-8 bg-gray-100 rounded-lg" />

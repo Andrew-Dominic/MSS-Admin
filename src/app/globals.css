@@ -128,3 +128,37 @@
     @apply font-sans;
   }
 }
+/* ── MSS brand (from the MSS app: AppColors + logo) ───────────────────── */
+:root {
+  --mss-blue: #2563eb;
+  --mss-blue-strong: #1d4ed8;
+  --mss-navy: #01284f;
+  --mss-navy-deep: #021a36;
+  --mss-saffron: #ff9933;
+  --mss-green: #068630;
+}
+
+@keyframes mss-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mss-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes mss-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.mss-fade-up { animation: mss-fade-up 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.mss-grow { transform-origin: bottom; animation: mss-grow 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.mss-float { animation: mss-float 5s ease-in-out infinite; }
+@keyframes mss-grow-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.mss-grow-x { transform-origin: left; animation: mss-grow-x 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mss-fade-up, .mss-grow, .mss-grow-x, .mss-float { animation: none; }
+}

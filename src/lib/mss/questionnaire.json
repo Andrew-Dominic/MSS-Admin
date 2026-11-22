@@ -1,0 +1,1661 @@
+{
+ "version": 3,
+ "langs": [
+  "en",
+  "hi",
+  "mr",
+  "ta"
+ ],
+ "steps": [
+  "about",
+  "place",
+  "business",
+  "needs",
+  "skills",
+  "extra"
+ ],
+ "fields": [
+  {
+   "id": "gender",
+   "step": 0,
+   "type": "single",
+   "required": true,
+   "question": {
+    "en": "What is your gender?",
+    "hi": "आपका लिंग क्या है?",
+    "mr": "तुमचे लिंग काय आहे?",
+    "ta": "உங்கள் பாலினம் என்ன?"
+   },
+   "options": [
+    {
+     "value": "woman",
+     "en": "Woman",
+     "hi": "महिला",
+     "mr": "महिला",
+     "ta": "பெண்"
+    },
+    {
+     "value": "man",
+     "en": "Man",
+     "hi": "पुरुष",
+     "mr": "पुरुष",
+     "ta": "ஆண்"
+    },
+    {
+     "value": "other",
+     "en": "Other",
+     "hi": "अन्य",
+     "mr": "इतर",
+     "ta": "மற்றவை"
+    },
+    {
+     "value": "prefer_not_to_say",
+     "en": "Prefer not to say",
+     "hi": "बताना नहीं चाहते",
+     "mr": "सांगू इच्छित नाही",
+     "ta": "சொல்ல விரும்பவில்லை"
+    }
+   ],
+   "essential": true,
+   "from_profile": true,
+   "audience": "both"
+  },
+  {
+   "id": "age_band",
+   "step": 0,
+   "type": "single",
+   "required": true,
+   "question": {
+    "en": "How old are you?",
+    "hi": "आपकी उम्र कितनी है?",
+    "mr": "तुमचे वय किती आहे?",
+    "ta": "உங்கள் வயது என்ன?"
+   },
+   "options": [
+    {
+     "value": "under_25",
+     "en": "Under 25",
+     "hi": "25 से कम",
+     "mr": "२५ पेक्षा कमी",
+     "ta": "25-க்குக் கீழ்"
+    },
+    {
+     "value": "a25_35",
+     "en": "25 to 35",
+     "hi": "25 से 35",
+     "mr": "२५ ते ३५",
+     "ta": "25 முதல் 35"
+    },
+    {
+     "value": "a36_45",
+     "en": "36 to 45",
+     "hi": "36 से 45",
+     "mr": "३६ ते ४५",
+     "ta": "36 முதல் 45"
+    },
+    {
+     "value": "a46_60",
+     "en": "46 to 60",
+     "hi": "46 से 60",
+     "mr": "४६ ते ६०",
+     "ta": "46 முதல் 60"
+    },
+    {
+     "value": "over_60",
+     "en": "Over 60",
+     "hi": "60 से अधिक",
+     "mr": "६० पेक्षा जास्त",
+     "ta": "60-க்கு மேல்"
+    }
+   ],
+   "essential": true,
+   "from_profile": true,
+   "audience": "both"
+  },
+  {
+   "id": "social_category",
+   "step": 0,
+   "type": "multi",
+   "question": {
+    "en": "Which group do you belong to? Pick all that apply.",
+    "hi": "आप किस वर्ग से हैं? जो लागू हों सभी चुनें।",
+    "mr": "तुम्ही कोणत्या प्रवर्गातील आहात? लागू असलेले सर्व निवडा.",
+    "ta": "நீங்கள் எந்தப் பிரிவைச் சேர்ந்தவர்? பொருந்துவன அனைத்தையும் தேர்ந்தெடுக்கவும்."
+   },
+   "options": [
+    {
+     "value": "general",
+     "en": "General",
+     "hi": "सामान्य",
+     "mr": "खुला (सर्वसाधारण)",
+     "ta": "பொதுப் பிரிவு"
+    },
+    {
+     "value": "obc",
+     "en": "OBC",
+     "hi": "अन्य पिछड़ा वर्ग (OBC)",
+     "mr": "इतर मागासवर्गीय (OBC)",
+     "ta": "பிற்படுத்தப்பட்டோர் (OBC)"
+    },
+    {
+     "value": "sc",
+     "en": "SC",
+     "hi": "अनुसूचित जाति (SC)",
+     "mr": "अनुसूचित जाती (SC)",
+     "ta": "பட்டியல் சாதியினர் (SC)"
+    },
+    {
+     "value": "st",
+     "en": "ST",
+     "hi": "अनुसूचित जनजाति (ST)",
+     "mr": "अनुसूचित जमाती (ST)",
+     "ta": "பட்டியல் பழங்குடியினர் (ST)"
+    },
+    {
+     "value": "minority",
+     "en": "Minority",
+     "hi": "अल्पसंख्यक",
+     "mr": "अल्पसंख्याक",
+     "ta": "சிறுபான்மையினர்"
+    },
+    {
+     "value": "divyang",
+     "en": "Person with disability",
+     "hi": "दिव्यांग",
+     "mr": "दिव्यांग",
+     "ta": "மாற்றுத்திறனாளி"
+    },
+    {
+     "value": "ex_serviceman",
+     "en": "Ex-serviceman",
+     "hi": "पूर्व सैनिक",
+     "mr": "माजी सैनिक",
+     "ta": "முன்னாள் படைவீரர்"
+    },
+    {
+     "value": "prefer_not_to_say",
+     "en": "Prefer not to say",
+     "hi": "बताना नहीं चाहते",
+     "mr": "सांगू इच्छित नाही",
+     "ta": "சொல்ல விரும்பவில்லை"
+    }
+   ],
+   "exclusive": [
+    "general",
+    "prefer_not_to_say"
+   ],
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "education",
+   "step": 0,
+   "type": "single",
+   "question": {
+    "en": "How far did you study?",
+    "hi": "आपने कितनी पढ़ाई की है?",
+    "mr": "तुमचे शिक्षण किती झाले आहे?",
+    "ta": "நீங்கள் எவ்வளவு படித்துள்ளீர்கள்?"
+   },
+   "options": [
+    {
+     "value": "below_7",
+     "en": "Below 7th",
+     "hi": "7वीं से कम",
+     "mr": "७ वी पेक्षा कमी",
+     "ta": "7-ஆம் வகுப்புக்குக் கீழ்"
+    },
+    {
+     "value": "p7_9",
+     "en": "7th to 9th",
+     "hi": "7वीं से 9वीं",
+     "mr": "७ वी ते ९ वी",
+     "ta": "7 முதல் 9-ஆம் வகுப்பு"
+    },
+    {
+     "value": "p10",
+     "en": "10th pass",
+     "hi": "10वीं पास",
+     "mr": "१० वी पास",
+     "ta": "10-ஆம் வகுப்பு தேர்ச்சி"
+    },
+    {
+     "value": "p12_iti",
+     "en": "12th, ITI or Diploma",
+     "hi": "12वीं, आईटीआई या डिप्लोमा",
+     "mr": "१२ वी, आयटीआय किंवा डिप्लोमा",
+     "ta": "12-ஆம் வகுப்பு, ஐடிஐ அல்லது டிப்ளமா"
+    },
+    {
+     "value": "graduate",
+     "en": "Graduate",
+     "hi": "स्नातक",
+     "mr": "पदवीधर",
+     "ta": "பட்டதாரி"
+    },
+    {
+     "value": "postgraduate",
+     "en": "Postgraduate or above",
+     "hi": "स्नातकोत्तर या उससे ऊपर",
+     "mr": "पदव्युत्तर किंवा त्यापुढे",
+     "ta": "முதுகலை அல்லது அதற்கு மேல்"
+    }
+   ],
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "home_state",
+   "step": 1,
+   "type": "select",
+   "question": {
+    "en": "Which state is your home in?",
+    "hi": "आपका गृह राज्य कौन-सा है?",
+    "mr": "तुमचे मूळ राज्य कोणते आहे?",
+    "ta": "உங்கள் சொந்த மாநிலம் எது?"
+   },
+   "options": [
+    {
+     "value": "andhra_pradesh",
+     "en": "Andhra Pradesh",
+     "hi": "आंध्र प्रदेश",
+     "mr": "आंध्र प्रदेश",
+     "ta": "ஆந்திரப் பிரதேசம்"
+    },
+    {
+     "value": "arunachal_pradesh",
+     "en": "Arunachal Pradesh",
+     "hi": "अरुणाचल प्रदेश",
+     "mr": "अरुणाचल प्रदेश",
+     "ta": "அருணாசலப் பிரதேசம்"
+    },
+    {
+     "value": "assam",
+     "en": "Assam",
+     "hi": "असम",
+     "mr": "आसाम",
+     "ta": "அசாம்"
+    },
+    {
+     "value": "bihar",
+     "en": "Bihar",
+     "hi": "बिहार",
+     "mr": "बिहार",
+     "ta": "பீகார்"
+    },
+    {
+     "value": "chhattisgarh",
+     "en": "Chhattisgarh",
+     "hi": "छत्तीसगढ़",
+     "mr": "छत्तीसगड",
+     "ta": "சத்தீஸ்கர்"
+    },
+    {
+     "value": "goa",
+     "en": "Goa",
+     "hi": "गोवा",
+     "mr": "गोवा",
+     "ta": "கோவா"
+    },
+    {
+     "value": "gujarat",
+     "en": "Gujarat",
+     "hi": "गुजरात",
+     "mr": "गुजरात",
+     "ta": "குஜராத்"
+    },
+    {
+     "value": "haryana",
+     "en": "Haryana",
+     "hi": "हरियाणा",
+     "mr": "हरियाणा",
+     "ta": "ஹரியானா"
+    },
+    {
+     "value": "himachal_pradesh",
+     "en": "Himachal Pradesh",
+     "hi": "हिमाचल प्रदेश",
+     "mr": "हिमाचल प्रदेश",
+     "ta": "இமாசலப் பிரதேசம்"
+    },
+    {
+     "value": "jharkhand",
+     "en": "Jharkhand",
+     "hi": "झारखंड",
+     "mr": "झारखंड",
+     "ta": "ஜார்க்கண்ட்"
+    },
+    {
+     "value": "karnataka",
+     "en": "Karnataka",
+     "hi": "कर्नाटक",
+     "mr": "कर्नाटक",
+     "ta": "கர்நாடகா"
+    },
+    {
+     "value": "kerala",
+     "en": "Kerala",
+     "hi": "केरल",
+     "mr": "केरळ",
+     "ta": "கேரளா"
+    },
+    {
+     "value": "madhya_pradesh",
+     "en": "Madhya Pradesh",
+     "hi": "मध्य प्रदेश",
+     "mr": "मध्य प्रदेश",
+     "ta": "மத்தியப் பிரதேசம்"
+    },
+    {
+     "value": "maharashtra",
+     "en": "Maharashtra",
+     "hi": "महाराष्ट्र",
+     "mr": "महाराष्ट्र",
+     "ta": "மகாராஷ்டிரா"
+    },
+    {
+     "value": "manipur",
+     "en": "Manipur",
+     "hi": "मणिपुर",
+     "mr": "मणिपूर",
+     "ta": "மணிப்பூர்"
+    },
+    {
+     "value": "meghalaya",
+     "en": "Meghalaya",
+     "hi": "मेघालय",
+     "mr": "मेघालय",
+     "ta": "மேகாலயா"
+    },
+    {
+     "value": "mizoram",
+     "en": "Mizoram",
+     "hi": "मिज़ोरम",
+     "mr": "मिझोरम",
+     "ta": "மிசோரம்"
+    },
+    {
+     "value": "nagaland",
+     "en": "Nagaland",
+     "hi": "नागालैंड",
+     "mr": "नागालँड",
+     "ta": "நாகாலாந்து"
+    },
+    {
+     "value": "odisha",
+     "en": "Odisha",
+     "hi": "ओडिशा",
+     "mr": "ओडिशा",
+     "ta": "ஒடிசா"
+    },
+    {
+     "value": "punjab",
+     "en": "Punjab",
+     "hi": "पंजाब",
+     "mr": "पंजाब",
+     "ta": "பஞ்சாப்"
+    },
+    {
+     "value": "rajasthan",
+     "en": "Rajasthan",
+     "hi": "राजस्थान",
+     "mr": "राजस्थान",
+     "ta": "ராஜஸ்தான்"
+    },
+    {
+     "value": "sikkim",
+     "en": "Sikkim",
+     "hi": "सिक्किम",
+     "mr": "सिक्कीम",
+     "ta": "சிக்கிம்"
+    },
+    {
+     "value": "tamil_nadu",
+     "en": "Tamil Nadu",
+     "hi": "तमिलनाडु",
+     "mr": "तमिळनाडू",
+     "ta": "தமிழ்நாடு"
+    },
+    {
+     "value": "telangana",
+     "en": "Telangana",
+     "hi": "तेलंगाना",
+     "mr": "तेलंगणा",
+     "ta": "தெலங்கானா"
+    },
+    {
+     "value": "tripura",
+     "en": "Tripura",
+     "hi": "त्रिपुरा",
+     "mr": "त्रिपुरा",
+     "ta": "திரிபுரா"
+    },
+    {
+     "value": "uttar_pradesh",
+     "en": "Uttar Pradesh",
+     "hi": "उत्तर प्रदेश",
+     "mr": "उत्तर प्रदेश",
+     "ta": "உத்தரப் பிரதேசம்"
+    },
+    {
+     "value": "uttarakhand",
+     "en": "Uttarakhand",
+     "hi": "उत्तराखंड",
+     "mr": "उत्तराखंड",
+     "ta": "உத்தராகண்ட்"
+    },
+    {
+     "value": "west_bengal",
+     "en": "West Bengal",
+     "hi": "पश्चिम बंगाल",
+     "mr": "पश्चिम बंगाल",
+     "ta": "மேற்கு வங்காளம்"
+    },
+    {
+     "value": "andaman_nicobar",
+     "en": "Andaman and Nicobar Islands",
+     "hi": "अंडमान और निकोबार द्वीप समूह",
+     "mr": "अंदमान आणि निकोबार बेटे",
+     "ta": "அந்தமான் நிக்கோபார் தீவுகள்"
+    },
+    {
+     "value": "chandigarh",
+     "en": "Chandigarh",
+     "hi": "चंडीगढ़",
+     "mr": "चंदीगड",
+     "ta": "சண்டிகர்"
+    },
+    {
+     "value": "dnh_dd",
+     "en": "Dadra and Nagar Haveli and Daman and Diu",
+     "hi": "दादरा और नगर हवेली और दमन और दीव",
+     "mr": "दादरा आणि नगर हवेली व दमण आणि दीव",
+     "ta": "தாத்ரா நகர் ஹவேலி மற்றும் டாமன் டையூ"
+    },
+    {
+     "value": "delhi",
+     "en": "Delhi",
+     "hi": "दिल्ली",
+     "mr": "दिल्ली",
+     "ta": "டெல்லி"
+    },
+    {
+     "value": "jammu_kashmir",
+     "en": "Jammu and Kashmir",
+     "hi": "जम्मू और कश्मीर",
+     "mr": "जम्मू आणि काश्मीर",
+     "ta": "ஜம்மு காஷ்மீர்"
+    },
+    {
+     "value": "ladakh",
+     "en": "Ladakh",
+     "hi": "लद्दाख",
+     "mr": "लडाख",
+     "ta": "லடாக்"
+    },
+    {
+     "value": "lakshadweep",
+     "en": "Lakshadweep",
+     "hi": "लक्षद्वीप",
+     "mr": "लक्षद्वीप",
+     "ta": "லட்சத்தீவு"
+    },
+    {
+     "value": "puducherry",
+     "en": "Puducherry",
+     "hi": "पुदुचेरी",
+     "mr": "पुद्दुचेरी",
+     "ta": "புதுச்சேரி"
+    }
+   ],
+   "from_profile": true,
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "home_district",
+   "step": 1,
+   "type": "place",
+   "question": {
+    "en": "Your home district",
+    "hi": "आपका गृह जिला",
+    "mr": "तुमचा मूळ जिल्हा",
+    "ta": "உங்கள் சொந்த மாவட்டம்"
+   },
+   "placeholder": {
+    "en": "District name",
+    "hi": "जिले का नाम",
+    "mr": "जिल्ह्याचे नाव",
+    "ta": "மாவட்டத்தின் பெயர்"
+   },
+   "place": "district",
+   "state_field": "home_state",
+   "from_profile": true,
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "business_state",
+   "step": 1,
+   "type": "select",
+   "required": true,
+   "question": {
+    "en": "In which state is your business, or where will it start?",
+    "hi": "आपका व्यवसाय किस राज्य में है, या कहाँ शुरू होगा?",
+    "mr": "तुमचा व्यवसाय कोणत्या राज्यात आहे किंवा कुठे सुरू होणार आहे?",
+    "ta": "உங்கள் தொழில் எந்த மாநிலத்தில் உள்ளது, அல்லது எங்கு தொடங்கப் போகிறீர்கள்?"
+   },
+   "options": [
+    {
+     "value": "andhra_pradesh",
+     "en": "Andhra Pradesh",
+     "hi": "आंध्र प्रदेश",
+     "mr": "आंध्र प्रदेश",
+     "ta": "ஆந்திரப் பிரதேசம்"
+    },
+    {
+     "value": "arunachal_pradesh",
+     "en": "Arunachal Pradesh",
+     "hi": "अरुणाचल प्रदेश",
+     "mr": "अरुणाचल प्रदेश",
+     "ta": "அருணாசலப் பிரதேசம்"
+    },
+    {
+     "value": "assam",
+     "en": "Assam",
+     "hi": "असम",
+     "mr": "आसाम",
+     "ta": "அசாம்"
+    },
+    {
+     "value": "bihar",
+     "en": "Bihar",
+     "hi": "बिहार",
+     "mr": "बिहार",
+     "ta": "பீகார்"
+    },
+    {
+     "value": "chhattisgarh",
+     "en": "Chhattisgarh",
+     "hi": "छत्तीसगढ़",
+     "mr": "छत्तीसगड",
+     "ta": "சத்தீஸ்கர்"
+    },
+    {
+     "value": "goa",
+     "en": "Goa",
+     "hi": "गोवा",
+     "mr": "गोवा",
+     "ta": "கோவா"
+    },
+    {
+     "value": "gujarat",
+     "en": "Gujarat",
+     "hi": "गुजरात",
+     "mr": "गुजरात",
+     "ta": "குஜராத்"
+    },
+    {
+     "value": "haryana",
+     "en": "Haryana",
+     "hi": "हरियाणा",
+     "mr": "हरियाणा",
+     "ta": "ஹரியானா"
+    },
+    {
+     "value": "himachal_pradesh",
+     "en": "Himachal Pradesh",
+     "hi": "हिमाचल प्रदेश",
+     "mr": "हिमाचल प्रदेश",
+     "ta": "இமாசலப் பிரதேசம்"
+    },
+    {
+     "value": "jharkhand",
+     "en": "Jharkhand",
+     "hi": "झारखंड",
+     "mr": "झारखंड",
+     "ta": "ஜார்க்கண்ட்"
+    },
+    {
+     "value": "karnataka",
+     "en": "Karnataka",
+     "hi": "कर्नाटक",
+     "mr": "कर्नाटक",
+     "ta": "கர்நாடகா"
+    },
+    {
+     "value": "kerala",
+     "en": "Kerala",
+     "hi": "केरल",
+     "mr": "केरळ",
+     "ta": "கேரளா"
+    },
+    {
+     "value": "madhya_pradesh",
+     "en": "Madhya Pradesh",
+     "hi": "मध्य प्रदेश",
+     "mr": "मध्य प्रदेश",
+     "ta": "மத்தியப் பிரதேசம்"
+    },
+    {
+     "value": "maharashtra",
+     "en": "Maharashtra",
+     "hi": "महाराष्ट्र",
+     "mr": "महाराष्ट्र",
+     "ta": "மகாராஷ்டிரா"
+    },
+    {
+     "value": "manipur",
+     "en": "Manipur",
+     "hi": "मणिपुर",
+     "mr": "मणिपूर",
+     "ta": "மணிப்பூர்"
+    },
+    {
+     "value": "meghalaya",
+     "en": "Meghalaya",
+     "hi": "मेघालय",
+     "mr": "मेघालय",
+     "ta": "மேகாலயா"
+    },
+    {
+     "value": "mizoram",
+     "en": "Mizoram",
+     "hi": "मिज़ोरम",
+     "mr": "मिझोरम",
+     "ta": "மிசோரம்"
+    },
+    {
+     "value": "nagaland",
+     "en": "Nagaland",
+     "hi": "नागालैंड",
+     "mr": "नागालँड",
+     "ta": "நாகாலாந்து"
+    },
+    {
+     "value": "odisha",
+     "en": "Odisha",
+     "hi": "ओडिशा",
+     "mr": "ओडिशा",
+     "ta": "ஒடிசா"
+    },
+    {
+     "value": "punjab",
+     "en": "Punjab",
+     "hi": "पंजाब",
+     "mr": "पंजाब",
+     "ta": "பஞ்சாப்"
+    },
+    {
+     "value": "rajasthan",
+     "en": "Rajasthan",
+     "hi": "राजस्थान",
+     "mr": "राजस्थान",
+     "ta": "ராஜஸ்தான்"
+    },
+    {
+     "value": "sikkim",
+     "en": "Sikkim",
+     "hi": "सिक्किम",
+     "mr": "सिक्कीम",
+     "ta": "சிக்கிம்"
+    },
+    {
+     "value": "tamil_nadu",
+     "en": "Tamil Nadu",
+     "hi": "तमिलनाडु",
+     "mr": "तमिळनाडू",
+     "ta": "தமிழ்நாடு"
+    },
+    {
+     "value": "telangana",
+     "en": "Telangana",
+     "hi": "तेलंगाना",
+     "mr": "तेलंगणा",
+     "ta": "தெலங்கானா"
+    },
+    {
+     "value": "tripura",
+     "en": "Tripura",
+     "hi": "त्रिपुरा",
+     "mr": "त्रिपुरा",
+     "ta": "திரிபுரா"
+    },
+    {
+     "value": "uttar_pradesh",
+     "en": "Uttar Pradesh",
+     "hi": "उत्तर प्रदेश",
+     "mr": "उत्तर प्रदेश",
+     "ta": "உத்தரப் பிரதேசம்"
+    },
+    {
+     "value": "uttarakhand",
+     "en": "Uttarakhand",
+     "hi": "उत्तराखंड",
+     "mr": "उत्तराखंड",
+     "ta": "உத்தராகண்ட்"
+    },
+    {
+     "value": "west_bengal",
+     "en": "West Bengal",
+     "hi": "पश्चिम बंगाल",
+     "mr": "पश्चिम बंगाल",
+     "ta": "மேற்கு வங்காளம்"
+    },
+    {
+     "value": "andaman_nicobar",
+     "en": "Andaman and Nicobar Islands",
+     "hi": "अंडमान और निकोबार द्वीप समूह",
+     "mr": "अंदमान आणि निकोबार बेटे",
+     "ta": "அந்தமான் நிக்கோபார் தீவுகள்"
+    },
+    {
+     "value": "chandigarh",
+     "en": "Chandigarh",
+     "hi": "चंडीगढ़",
+     "mr": "चंदीगड",
+     "ta": "சண்டிகர்"
+    },
+    {
+     "value": "dnh_dd",
+     "en": "Dadra and Nagar Haveli and Daman and Diu",
+     "hi": "दादरा और नगर हवेली और दमन और दीव",
+     "mr": "दादरा आणि नगर हवेली व दमण आणि दीव",
+     "ta": "தாத்ரா நகர் ஹவேலி மற்றும் டாமன் டையூ"
+    },
+    {
+     "value": "delhi",
+     "en": "Delhi",
+     "hi": "दिल्ली",
+     "mr": "दिल्ली",
+     "ta": "டெல்லி"
+    },
+    {
+     "value": "jammu_kashmir",
+     "en": "Jammu and Kashmir",
+     "hi": "जम्मू और कश्मीर",
+     "mr": "जम्मू आणि काश्मीर",
+     "ta": "ஜம்மு காஷ்மீர்"
+    },
+    {
+     "value": "ladakh",
+     "en": "Ladakh",
+     "hi": "लद्दाख",
+     "mr": "लडाख",
+     "ta": "லடாக்"
+    },
+    {
+     "value": "lakshadweep",
+     "en": "Lakshadweep",
+     "hi": "लक्षद्वीप",
+     "mr": "लक्षद्वीप",
+     "ta": "லட்சத்தீவு"
+    },
+    {
+     "value": "puducherry",
+     "en": "Puducherry",
+     "hi": "पुदुचेरी",
+     "mr": "पुद्दुचेरी",
+     "ta": "புதுச்சேரி"
+    }
+   ],
+   "location": true,
+   "essential": true,
+   "audience": "both"
+  },
+  {
+   "id": "business_district",
+   "step": 1,
+   "type": "place",
+   "question": {
+    "en": "District of your business",
+    "hi": "व्यवसाय का जिला",
+    "mr": "व्यवसायाचा जिल्हा",
+    "ta": "தொழில் உள்ள மாவட்டம்"
+   },
+   "placeholder": {
+    "en": "District name",
+    "hi": "जिले का नाम",
+    "mr": "जिल्ह्याचे नाव",
+    "ta": "மாவட்டத்தின் பெயர்"
+   },
+   "location": true,
+   "place": "district",
+   "state_field": "business_state",
+   "essential": true,
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "business_taluka",
+   "step": 1,
+   "type": "place",
+   "question": {
+    "en": "Taluka (block) of your business",
+    "hi": "व्यवसाय का तालुका (ब्लॉक)",
+    "mr": "व्यवसायाचा तालुका",
+    "ta": "தொழில் உள்ள வட்டம் (தாலுகா)"
+   },
+   "placeholder": {
+    "en": "Taluka name",
+    "hi": "तालुके का नाम",
+    "mr": "तालुक्याचे नाव",
+    "ta": "வட்டத்தின் பெயர்"
+   },
+   "location": true,
+   "place": "taluka",
+   "state_field": "business_state",
+   "district_field": "business_district",
+   "essential": true,
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "business_city",
+   "step": 1,
+   "type": "place",
+   "question": {
+    "en": "City or town of your business",
+    "hi": "व्यवसाय का शहर या कस्बा",
+    "mr": "व्यवसायाचे शहर किंवा गाव",
+    "ta": "தொழில் உள்ள நகரம் அல்லது ஊர்"
+   },
+   "placeholder": {
+    "en": "City or town name",
+    "hi": "शहर या कस्बे का नाम",
+    "mr": "शहर किंवा गावाचे नाव",
+    "ta": "நகரம் அல்லது ஊரின் பெயர்"
+   },
+   "location": true,
+   "place": "city",
+   "state_field": "business_state",
+   "essential": true,
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "area_type",
+   "step": 1,
+   "type": "single",
+   "question": {
+    "en": "Is the place a village, a town or a city?",
+    "hi": "यह जगह गाँव है, कस्बा है या शहर?",
+    "mr": "हे ठिकाण गाव आहे, नगर की शहर?",
+    "ta": "இது கிராமமா, சிறு நகரமா அல்லது பெரிய நகரமா?"
+   },
+   "options": [
+    {
+     "value": "village",
+     "en": "Village",
+     "hi": "गाँव (ग्रामीण)",
+     "mr": "गाव (ग्रामीण)",
+     "ta": "கிராமம் (ஊரகம்)"
+    },
+    {
+     "value": "town",
+     "en": "Town",
+     "hi": "कस्बा",
+     "mr": "नगर",
+     "ta": "சிறு நகரம்"
+    },
+    {
+     "value": "city",
+     "en": "City",
+     "hi": "शहर (शहरी)",
+     "mr": "शहर (शहरी)",
+     "ta": "நகரம் (நகர்ப்புறம்)"
+    }
+   ],
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "special_zone",
+   "step": 1,
+   "type": "multi",
+   "question": {
+    "en": "Is your business in any of these government focus areas?",
+    "hi": "क्या आपका व्यवसाय इन सरकारी विशेष क्षेत्रों में से किसी में है?",
+    "mr": "तुमचा व्यवसाय या सरकारी विशेष क्षेत्रांपैकी कशात आहे?",
+    "ta": "உங்கள் தொழில் இந்த அரசு சிறப்புப் பகுதிகளில் ஏதாவது ஒன்றில் உள்ளதா?"
+   },
+   "options": [
+    {
+     "value": "tribal",
+     "en": "Tribal area",
+     "hi": "आदिवासी क्षेत्र",
+     "mr": "आदिवासी क्षेत्र",
+     "ta": "பழங்குடியினர் பகுதி"
+    },
+    {
+     "value": "aspirational",
+     "en": "Aspirational district",
+     "hi": "आकांक्षी जिला",
+     "mr": "आकांक्षी जिल्हा",
+     "ta": "முன்னேற விரும்பும் மாவட்டம்"
+    },
+    {
+     "value": "backward_taluka",
+     "en": "Backward taluka",
+     "hi": "पिछड़ा तालुका",
+     "mr": "मागास तालुका",
+     "ta": "பின்தங்கிய வட்டம்"
+    },
+    {
+     "value": "industrial_estate",
+     "en": "Industrial estate (like MIDC)",
+     "hi": "औद्योगिक क्षेत्र (जैसे MIDC)",
+     "mr": "औद्योगिक वसाहत (उदा. MIDC)",
+     "ta": "தொழிற்பேட்டை (எ.கா. SIPCOT, MIDC)"
+    },
+    {
+     "value": "none",
+     "en": "None of these, or not sure",
+     "hi": "इनमें से कोई नहीं, या पता नहीं",
+     "mr": "यापैकी नाही, किंवा माहित नाही",
+     "ta": "இவை எதுவும் இல்லை, அல்லது தெரியாது"
+    }
+   ],
+   "exclusive": [
+    "none"
+   ],
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "nature",
+   "step": 2,
+   "type": "single",
+   "required": true,
+   "question": {
+    "en": "What does your business do?",
+    "hi": "आपका व्यवसाय क्या करता है?",
+    "mr": "तुमचा व्यवसाय काय करतो?",
+    "ta": "உங்கள் தொழில் என்ன செய்கிறது?"
+   },
+   "options": [
+    {
+     "value": "manufacturing",
+     "en": "Makes products",
+     "hi": "सामान बनाता है (विनिर्माण)",
+     "mr": "वस्तू बनवतो (उत्पादन)",
+     "ta": "பொருட்களைத் தயாரிக்கிறது"
+    },
+    {
+     "value": "services",
+     "en": "Gives a service",
+     "hi": "सेवा देता है",
+     "mr": "सेवा देतो",
+     "ta": "சேவை வழங்குகிறது"
+    },
+    {
+     "value": "trading",
+     "en": "Buys and sells goods",
+     "hi": "सामान खरीदता-बेचता है",
+     "mr": "वस्तूंची खरेदी-विक्री करतो",
+     "ta": "பொருட்களை வாங்கி விற்கிறது"
+    },
+    {
+     "value": "agro_food",
+     "en": "Farm-based work or food processing",
+     "hi": "खेती से जुड़ा काम या खाद्य प्रसंस्करण",
+     "mr": "शेतीवर आधारित काम किंवा अन्न प्रक्रिया",
+     "ta": "விவசாயம் சார்ந்த பணி அல்லது உணவு பதப்படுத்துதல்"
+    },
+    {
+     "value": "other",
+     "en": "Something else",
+     "hi": "कुछ और",
+     "mr": "इतर",
+     "ta": "வேறு"
+    }
+   ],
+   "essential": true,
+   "audience": "both"
+  },
+  {
+   "id": "product",
+   "step": 2,
+   "type": "text",
+   "question": {
+    "en": "In a few words, what do you make or do?",
+    "hi": "कुछ शब्दों में बताइए, आप क्या बनाते या करते हैं?",
+    "mr": "थोडक्यात सांगा, तुम्ही काय बनवता किंवा करता?",
+    "ta": "நீங்கள் என்ன தயாரிக்கிறீர்கள் அல்லது செய்கிறீர்கள் என்று சில வார்த்தைகளில் சொல்லுங்கள்"
+   },
+   "placeholder": {
+    "en": "For example: dairy, tailoring, auto parts",
+    "hi": "जैसे: डेयरी, सिलाई, ऑटो पार्ट्स",
+    "mr": "उदा. दुग्ध व्यवसाय, शिवणकाम, ऑटो पार्ट्स",
+    "ta": "எ.கா. பால் பொருட்கள், தையல், ஆட்டோ உதிரிபாகங்கள்"
+   },
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "business_age",
+   "step": 2,
+   "type": "single",
+   "required": true,
+   "question": {
+    "en": "How long has your business been running?",
+    "hi": "आपका व्यवसाय कितने समय से चल रहा है?",
+    "mr": "तुमचा व्यवसाय किती काळापासून सुरू आहे?",
+    "ta": "உங்கள் தொழில் எவ்வளவு காலமாக நடைபெறுகிறது?"
+   },
+   "options": [
+    {
+     "value": "not_started",
+     "en": "Not started yet",
+     "hi": "अभी शुरू नहीं किया",
+     "mr": "अजून सुरू केलेला नाही",
+     "ta": "இன்னும் தொடங்கவில்லை"
+    },
+    {
+     "value": "lt_1",
+     "en": "Less than 1 year",
+     "hi": "1 वर्ष से कम",
+     "mr": "१ वर्षापेक्षा कमी",
+     "ta": "1 ஆண்டுக்கும் குறைவு"
+    },
+    {
+     "value": "y1_3",
+     "en": "1 to 3 years",
+     "hi": "1 से 3 वर्ष",
+     "mr": "१ ते ३ वर्षे",
+     "ta": "1 முதல் 3 ஆண்டுகள்"
+    },
+    {
+     "value": "y3_10",
+     "en": "3 to 10 years",
+     "hi": "3 से 10 वर्ष",
+     "mr": "३ ते १० वर्षे",
+     "ta": "3 முதல் 10 ஆண்டுகள்"
+    },
+    {
+     "value": "gt_10",
+     "en": "More than 10 years",
+     "hi": "10 वर्ष से अधिक",
+     "mr": "१० वर्षांपेक्षा जास्त",
+     "ta": "10 ஆண்டுகளுக்கு மேல்"
+    }
+   ],
+   "essential": true,
+   "audience": "both"
+  },
+  {
+   "id": "org_structure",
+   "step": 2,
+   "type": "single",
+   "question": {
+    "en": "How is your business set up?",
+    "hi": "आपका व्यवसाय किस रूप में है?",
+    "mr": "तुमचा व्यवसाय कोणत्या स्वरूपात आहे?",
+    "ta": "உங்கள் தொழில் எந்த வடிவில் உள்ளது?"
+   },
+   "options": [
+    {
+     "value": "proprietorship",
+     "en": "Owned by one person (proprietorship)",
+     "hi": "एक व्यक्ति का (एकल स्वामित्व)",
+     "mr": "एका व्यक्तीचा (एकल मालकी)",
+     "ta": "ஒருவருக்குச் சொந்தமானது (தனி உரிமையாளர்)"
+    },
+    {
+     "value": "partnership",
+     "en": "Partnership",
+     "hi": "साझेदारी",
+     "mr": "भागीदारी",
+     "ta": "கூட்டாண்மை"
+    },
+    {
+     "value": "pvt_ltd",
+     "en": "Private limited company",
+     "hi": "प्राइवेट लिमिटेड कंपनी",
+     "mr": "प्रायव्हेट लिमिटेड कंपनी",
+     "ta": "தனியார் நிறுவனம் (Pvt Ltd)"
+    },
+    {
+     "value": "llp",
+     "en": "LLP",
+     "hi": "एलएलपी (LLP)",
+     "mr": "एलएलपी (LLP)",
+     "ta": "எல்எல்பி (LLP)"
+    },
+    {
+     "value": "cooperative",
+     "en": "Co-operative society",
+     "hi": "सहकारी संस्था",
+     "mr": "सहकारी संस्था",
+     "ta": "கூட்டுறவுச் சங்கம்"
+    },
+    {
+     "value": "shg",
+     "en": "Self-help group (SHG)",
+     "hi": "स्वयं सहायता समूह (SHG)",
+     "mr": "बचत गट (SHG)",
+     "ta": "சுய உதவிக் குழு (SHG)"
+    },
+    {
+     "value": "not_registered",
+     "en": "Not registered yet",
+     "hi": "अभी पंजीकृत नहीं",
+     "mr": "नोंदणी केलेली नाही",
+     "ta": "இன்னும் பதிவு செய்யவில்லை"
+    }
+   ],
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "registrations",
+   "step": 2,
+   "type": "multi",
+   "audience": "existing",
+   "question": {
+    "en": "Which government registrations do you have?",
+    "hi": "आपके पास कौन-से सरकारी पंजीकरण हैं?",
+    "mr": "तुमच्याकडे कोणती सरकारी नोंदणी आहे?",
+    "ta": "உங்களிடம் எந்த அரசுப் பதிவுகள் உள்ளன?"
+   },
+   "options": [
+    {
+     "value": "udyam",
+     "en": "Udyam",
+     "hi": "उद्यम (Udyam)",
+     "mr": "उद्यम (Udyam)",
+     "ta": "உத்யம் (Udyam)"
+    },
+    {
+     "value": "gst",
+     "en": "GST",
+     "hi": "जीएसटी (GST)",
+     "mr": "जीएसटी (GST)",
+     "ta": "ஜிஎஸ்டி (GST)"
+    },
+    {
+     "value": "pan",
+     "en": "Business PAN",
+     "hi": "बिजनेस पैन",
+     "mr": "व्यवसाय पॅन",
+     "ta": "தொழில் பான் (PAN)"
+    },
+    {
+     "value": "shop_act",
+     "en": "Shop Act / Gumasta",
+     "hi": "शॉप एक्ट / गुमास्ता",
+     "mr": "शॉप अ‍ॅक्ट / गुमास्ता",
+     "ta": "கடை மற்றும் நிறுவனப் பதிவு"
+    },
+    {
+     "value": "fssai",
+     "en": "FSSAI",
+     "hi": "FSSAI",
+     "mr": "FSSAI",
+     "ta": "FSSAI"
+    },
+    {
+     "value": "none",
+     "en": "None",
+     "hi": "कोई नहीं",
+     "mr": "काहीही नाही",
+     "ta": "எதுவும் இல்லை"
+    }
+   ],
+   "exclusive": [
+    "none"
+   ],
+   "required": false
+  },
+  {
+   "id": "employees",
+   "step": 2,
+   "type": "pair",
+   "audience": "existing",
+   "question": {
+    "en": "How many people work in your business?",
+    "hi": "आपके व्यवसाय में कितने लोग काम करते हैं?",
+    "mr": "तुमच्या व्यवसायात किती लोक काम करतात?",
+    "ta": "உங்கள் தொழிலில் எத்தனை பேர் வேலை செய்கிறார்கள்?"
+   },
+   "parts": [
+    {
+     "id": "total",
+     "label": {
+      "en": "Total staff",
+      "hi": "कुल कर्मचारी",
+      "mr": "एकूण कामगार",
+      "ta": "மொத்த ஊழியர்கள்"
+     }
+    },
+    {
+     "id": "women",
+     "label": {
+      "en": "Women staff",
+      "hi": "महिला कर्मचारी",
+      "mr": "महिला कामगार",
+      "ta": "பெண் ஊழியர்கள்"
+     }
+    }
+   ],
+   "required": false
+  },
+  {
+   "id": "machinery",
+   "step": 2,
+   "type": "single",
+   "question": {
+    "en": "How much money is put into machines and equipment? (already done, or planned)",
+    "hi": "मशीनों और उपकरणों में कितना पैसा लगा है? (लग चुका या योजना है)",
+    "mr": "यंत्रसामग्री आणि उपकरणांमध्ये किती पैसे गुंतवले आहेत? (केलेले किंवा नियोजित)",
+    "ta": "இயந்திரங்கள் மற்றும் உபகரணங்களில் எவ்வளவு முதலீடு செய்யப்பட்டுள்ளது? (செய்தது அல்லது திட்டமிட்டது)"
+   },
+   "options": [
+    {
+     "value": "up_to_10l",
+     "en": "Up to ₹10 lakh",
+     "hi": "₹10 लाख तक",
+     "mr": "₹१० लाखांपर्यंत",
+     "ta": "₹10 லட்சம் வரை"
+    },
+    {
+     "value": "l10_250",
+     "en": "₹10 lakh to ₹2.5 crore",
+     "hi": "₹10 लाख से ₹2.5 करोड़",
+     "mr": "₹१० लाख ते ₹२.५ कोटी",
+     "ta": "₹10 லட்சம் முதல் ₹2.5 கோடி"
+    },
+    {
+     "value": "c2_25",
+     "en": "₹2.5 crore to ₹25 crore",
+     "hi": "₹2.5 करोड़ से ₹25 करोड़",
+     "mr": "₹२.५ कोटी ते ₹२५ कोटी",
+     "ta": "₹2.5 கோடி முதல் ₹25 கோடி"
+    },
+    {
+     "value": "over_25c",
+     "en": "More than ₹25 crore",
+     "hi": "₹25 करोड़ से अधिक",
+     "mr": "₹२५ कोटींपेक्षा जास्त",
+     "ta": "₹25 கோடிக்கு மேல்"
+    },
+    {
+     "value": "none_yet",
+     "en": "Nothing yet, or not sure",
+     "hi": "अभी कुछ नहीं, या पता नहीं",
+     "mr": "अजून काही नाही, किंवा माहित नाही",
+     "ta": "இன்னும் இல்லை, அல்லது தெரியாது"
+    }
+   ],
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "gi_tag",
+   "step": 2,
+   "type": "single",
+   "audience": "existing",
+   "question": {
+    "en": "Does your product have a GI tag?",
+    "hi": "क्या आपके उत्पाद को GI टैग मिला है?",
+    "mr": "तुमच्या उत्पादनाला GI टॅग आहे का?",
+    "ta": "உங்கள் பொருளுக்கு GI குறியீடு உள்ளதா?"
+   },
+   "options": [
+    {
+     "value": "yes",
+     "en": "Yes",
+     "hi": "हाँ",
+     "mr": "होय",
+     "ta": "ஆம்"
+    },
+    {
+     "value": "no",
+     "en": "No",
+     "hi": "नहीं",
+     "mr": "नाही",
+     "ta": "இல்லை"
+    },
+    {
+     "value": "not_sure",
+     "en": "Not sure",
+     "hi": "पता नहीं",
+     "mr": "माहित नाही",
+     "ta": "தெரியாது"
+    }
+   ],
+   "required": false
+  },
+  {
+   "id": "cluster",
+   "step": 2,
+   "type": "single",
+   "audience": "existing",
+   "question": {
+    "en": "Are you part of a local industry cluster or group?",
+    "hi": "क्या आप किसी स्थानीय उद्योग समूह या क्लस्टर का हिस्सा हैं?",
+    "mr": "तुम्ही स्थानिक उद्योग समूह किंवा क्लस्टरचा भाग आहात का?",
+    "ta": "நீங்கள் உள்ளூர் தொழில் குழு அல்லது கிளஸ்டரின் ஒரு பகுதியா?"
+   },
+   "options": [
+    {
+     "value": "in_cluster",
+     "en": "Yes, part of a cluster",
+     "hi": "हाँ, क्लस्टर का हिस्सा हूँ",
+     "mr": "होय, क्लस्टरचा भाग आहे",
+     "ta": "ஆம், கிளஸ்டரின் பகுதி"
+    },
+    {
+     "value": "standalone",
+     "en": "No, I work on my own",
+     "hi": "नहीं, मैं अकेले काम करता/करती हूँ",
+     "mr": "नाही, मी स्वतंत्र काम करतो/करते",
+     "ta": "இல்லை, நான் தனியாகச் செயல்படுகிறேன்"
+    },
+    {
+     "value": "not_sure",
+     "en": "Not sure",
+     "hi": "पता नहीं",
+     "mr": "माहित नाही",
+     "ta": "தெரியாது"
+    }
+   ],
+   "required": false
+  },
+  {
+   "id": "export",
+   "step": 2,
+   "type": "single",
+   "question": {
+    "en": "Do you sell, or plan to sell, outside India?",
+    "hi": "क्या आप भारत के बाहर बेचते हैं, या बेचने की योजना है?",
+    "mr": "तुम्ही भारताबाहेर विक्री करता का, किंवा करण्याचा विचार आहे का?",
+    "ta": "நீங்கள் இந்தியாவுக்கு வெளியே விற்கிறீர்களா, அல்லது விற்கத் திட்டமா?"
+   },
+   "options": [
+    {
+     "value": "exporting",
+     "en": "Yes, I already do",
+     "hi": "हाँ, अभी बेचता/बेचती हूँ",
+     "mr": "होय, सध्या करतो/करते",
+     "ta": "ஆம், ஏற்கனவே விற்கிறேன்"
+    },
+    {
+     "value": "planning",
+     "en": "I plan to",
+     "hi": "योजना है",
+     "mr": "विचार आहे",
+     "ta": "திட்டமிட்டுள்ளேன்"
+    },
+    {
+     "value": "domestic",
+     "en": "No, only in India",
+     "hi": "नहीं, केवल भारत में",
+     "mr": "नाही, फक्त भारतात",
+     "ta": "இல்லை, இந்தியாவில் மட்டும்"
+    }
+   ],
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "goals",
+   "step": 3,
+   "type": "multi",
+   "question": {
+    "en": "What do you want to do right now? Pick all that apply.",
+    "hi": "अभी आप क्या करना चाहते हैं? जो लागू हों सभी चुनें।",
+    "mr": "सध्या तुम्हाला काय करायचे आहे? लागू असलेले सर्व निवडा.",
+    "ta": "இப்போது நீங்கள் என்ன செய்ய விரும்புகிறீர்கள்? பொருந்துவன அனைத்தையும் தேர்ந்தெடுக்கவும்."
+   },
+   "options": [
+    {
+     "value": "start",
+     "en": "Start a new business",
+     "hi": "नया व्यवसाय शुरू करना",
+     "mr": "नवीन व्यवसाय सुरू करणे",
+     "ta": "புதிய தொழில் தொடங்க"
+    },
+    {
+     "value": "expand",
+     "en": "Grow my existing business",
+     "hi": "अपना व्यवसाय बढ़ाना",
+     "mr": "माझा व्यवसाय वाढवणे",
+     "ta": "என் தொழிலை வளர்க்க"
+    },
+    {
+     "value": "machinery",
+     "en": "Buy machines or new technology",
+     "hi": "मशीन या नई तकनीक खरीदना",
+     "mr": "यंत्रे किंवा नवीन तंत्रज्ञान घेणे",
+     "ta": "இயந்திரங்கள் அல்லது புதிய தொழில்நுட்பம் வாங்க"
+    },
+    {
+     "value": "working_capital",
+     "en": "Get money for day-to-day running",
+     "hi": "रोज़ के खर्च के लिए पैसा",
+     "mr": "दैनंदिन खर्चासाठी पैसे",
+     "ta": "அன்றாட செலவுகளுக்குப் பணம்"
+    },
+    {
+     "value": "market",
+     "en": "Find buyers or sell abroad",
+     "hi": "ग्राहक खोजना या विदेश में बेचना",
+     "mr": "ग्राहक शोधणे किंवा परदेशात विकणे",
+     "ta": "வாடிக்கையாளர்களைக் கண்டறிய அல்லது வெளிநாட்டில் விற்க"
+    },
+    {
+     "value": "skills",
+     "en": "Train myself or my staff",
+     "hi": "खुद को या कर्मचारियों को प्रशिक्षित करना",
+     "mr": "स्वतःला किंवा कामगारांना प्रशिक्षण देणे",
+     "ta": "எனக்கோ என் ஊழியர்களுக்கோ பயிற்சி"
+    }
+   ],
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "help_needed",
+   "step": 3,
+   "type": "multi",
+   "question": {
+    "en": "What kind of help do you need most? Pick all that apply.",
+    "hi": "आपको सबसे ज़्यादा किस तरह की मदद चाहिए? जो लागू हों सभी चुनें।",
+    "mr": "तुम्हाला सर्वात जास्त कोणत्या प्रकारची मदत हवी? लागू असलेले सर्व निवडा.",
+    "ta": "உங்களுக்கு எந்த உதவி அதிகம் தேவை? பொருந்துவன அனைத்தையும் தேர்ந்தெடுக்கவும்."
+   },
+   "options": [
+    {
+     "value": "finance",
+     "en": "Money (loans, subsidy)",
+     "hi": "पैसा (कर्ज, सब्सिडी)",
+     "mr": "पैसा (कर्ज, अनुदान)",
+     "ta": "பணம் (கடன், மானியம்)"
+    },
+    {
+     "value": "technology",
+     "en": "Machines and technology",
+     "hi": "मशीन और तकनीक",
+     "mr": "यंत्रसामग्री व तंत्रज्ञान",
+     "ta": "இயந்திரங்கள் மற்றும் தொழில்நுட்பம்"
+    },
+    {
+     "value": "manpower",
+     "en": "Staff and training",
+     "hi": "कर्मचारी और प्रशिक्षण",
+     "mr": "कामगार व प्रशिक्षण",
+     "ta": "ஊழியர்கள் மற்றும் பயிற்சி"
+    },
+    {
+     "value": "marketing",
+     "en": "Buyers and marketing",
+     "hi": "ग्राहक और मार्केटिंग",
+     "mr": "ग्राहक व मार्केटिंग",
+     "ta": "வாடிக்கையாளர்கள் மற்றும் சந்தைப்படுத்தல்"
+    },
+    {
+     "value": "legal",
+     "en": "Registrations and legal papers",
+     "hi": "पंजीकरण और कानूनी कागज़ात",
+     "mr": "नोंदणी व कायदेशीर कागदपत्रे",
+     "ta": "பதிவுகள் மற்றும் சட்ட ஆவணங்கள்"
+    }
+   ],
+   "essential": true,
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "digital",
+   "step": 4,
+   "type": "single",
+   "question": {
+    "en": "How comfortable are you with phone and online tools?",
+    "hi": "फ़ोन और ऑनलाइन साधनों के साथ आप कितने सहज हैं?",
+    "mr": "फोन आणि ऑनलाइन साधने वापरण्यात तुम्ही किती सहज आहात?",
+    "ta": "தொலைபேசி மற்றும் இணையக் கருவிகளைப் பயன்படுத்துவதில் எவ்வளவு வசதியாக உள்ளீர்கள்?"
+   },
+   "options": [
+    {
+     "value": "basic",
+     "en": "I only use WhatsApp and UPI",
+     "hi": "मैं सिर्फ़ WhatsApp और UPI चलाता/चलाती हूँ",
+     "mr": "मी फक्त WhatsApp आणि UPI वापरतो/वापरते",
+     "ta": "நான் WhatsApp மற்றும் UPI மட்டுமே பயன்படுத்துகிறேன்"
+    },
+    {
+     "value": "moderate",
+     "en": "I can fill online forms",
+     "hi": "मैं ऑनलाइन फॉर्म भर सकता/सकती हूँ",
+     "mr": "मी ऑनलाइन फॉर्म भरू शकतो/शकते",
+     "ta": "என்னால் இணையப் படிவங்களை நிரப்ப முடியும்"
+    },
+    {
+     "value": "advanced",
+     "en": "I use accounting or online selling tools",
+     "hi": "मैं अकाउंटिंग या ऑनलाइन बिक्री के साधन चलाता/चलाती हूँ",
+     "mr": "मी हिशोब किंवा ऑनलाइन विक्रीची साधने वापरतो/वापरते",
+     "ta": "நான் கணக்கு அல்லது இணைய விற்பனைக் கருவிகளைப் பயன்படுத்துகிறேன்"
+    }
+   ],
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "tax",
+   "step": 4,
+   "type": "single",
+   "question": {
+    "en": "How well do you know tax and GST rules?",
+    "hi": "कर और GST के नियम आप कितने जानते हैं?",
+    "mr": "कर आणि GST चे नियम तुम्हाला किती माहीत आहेत?",
+    "ta": "வரி மற்றும் GST விதிகள் உங்களுக்கு எவ்வளவு தெரியும்?"
+   },
+   "options": [
+    {
+     "value": "good",
+     "en": "I know them well",
+     "hi": "मुझे अच्छी जानकारी है",
+     "mr": "मला चांगली माहिती आहे",
+     "ta": "நன்கு தெரியும்"
+    },
+    {
+     "value": "basic",
+     "en": "I need basic guidance",
+     "hi": "मुझे बुनियादी मार्गदर्शन चाहिए",
+     "mr": "मला प्राथमिक मार्गदर्शन हवे",
+     "ta": "அடிப்படை வழிகாட்டுதல் தேவை"
+    },
+    {
+     "value": "ca",
+     "en": "My accountant (CA) handles it",
+     "hi": "मेरे सीए (CA) देखते हैं",
+     "mr": "माझे सीए (CA) पाहतात",
+     "ta": "என் கணக்காளர் (CA) பார்த்துக்கொள்கிறார்"
+    }
+   ],
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "prior_subsidy",
+   "step": 5,
+   "type": "single",
+   "question": {
+    "en": "Has anyone in your family (you or your spouse) already taken a government business subsidy?",
+    "hi": "क्या आपके परिवार में (आप या जीवनसाथी) किसी ने पहले सरकारी व्यवसाय सब्सिडी ली है?",
+    "mr": "तुमच्या कुटुंबातील कोणी (तुम्ही किंवा जोडीदार) आधी सरकारी व्यवसाय अनुदान घेतले आहे का?",
+    "ta": "உங்கள் குடும்பத்தில் (நீங்கள் அல்லது துணைவர்) யாராவது ஏற்கனவே அரசு தொழில் மானியம் பெற்றுள்ளார்களா?"
+   },
+   "options": [
+    {
+     "value": "yes",
+     "en": "Yes",
+     "hi": "हाँ",
+     "mr": "होय",
+     "ta": "ஆம்"
+    },
+    {
+     "value": "no",
+     "en": "No",
+     "hi": "नहीं",
+     "mr": "नाही",
+     "ta": "இல்லை"
+    },
+    {
+     "value": "not_sure",
+     "en": "Not sure",
+     "hi": "पता नहीं",
+     "mr": "माहित नाही",
+     "ta": "தெரியாது"
+    }
+   ],
+   "audience": "both",
+   "required": false
+  },
+  {
+   "id": "own_money",
+   "step": 5,
+   "type": "single",
+   "question": {
+    "en": "How much of the project money can you put in yourself?",
+    "hi": "प्रोजेक्ट के लिए आप अपनी तरफ़ से कितना पैसा लगा सकते हैं?",
+    "mr": "प्रकल्पासाठी तुम्ही स्वतःचे किती पैसे गुंतवू शकता?",
+    "ta": "திட்டத் தொகையில் எவ்வளவை நீங்களே முதலீடு செய்ய முடியும்?"
+   },
+   "options": [
+    {
+     "value": "lt_5",
+     "en": "Less than 5%",
+     "hi": "5% से कम",
+     "mr": "५% पेक्षा कमी",
+     "ta": "5%-க்கும் குறைவு"
+    },
+    {
+     "value": "p5_10",
+     "en": "5% to 10%",
+     "hi": "5% से 10%",
+     "mr": "५% ते १०%",
+     "ta": "5% முதல் 10%"
+    },
+    {
+     "value": "gt_10",
+     "en": "More than 10%",
+     "hi": "10% से अधिक",
+     "mr": "१०% पेक्षा जास्त",
+     "ta": "10%-க்கு மேல்"
+    },
+    {
+     "value": "need_all",
+     "en": "I need full support",
+     "hi": "मुझे पूरी मदद चाहिए",
+     "mr": "मला पूर्ण मदत हवी",
+     "ta": "எனக்கு முழு உதவி தேவை"
+    }
+   ],
+   "audience": "both",
+   "required": false
+  }
+ ]
+}
