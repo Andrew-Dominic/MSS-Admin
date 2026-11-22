@@ -125,6 +125,8 @@ export function describeError(e: unknown): string {
     INVALID_CREDENTIALS: "Wrong email or password.",
     INVALID_APP_LOCK: "The lock message must be at most 500 characters of plain text.",
     APP_LOCKED: "The app is locked and this account is not an admin.",
+    INVALID_ANALYTICS_REPORT: "The date range or filters are not valid (at most 366 days, From before To).",
+    ANALYTICS_REPORT_NOT_FOUND: "This usage report is not available on the server yet.",
   };
   const detail = Array.isArray(e.details)
     ? e.details.map((d) => (typeof d === "object" ? Object.values(d as object).join(" ") : String(d))).join("; ")

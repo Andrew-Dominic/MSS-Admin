@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart3, Bell, FileText, LayoutDashboard, Lock, LogOut, Menu, PlusCircle, Rocket, Upload, Users, X, type LucideIcon } from "lucide-react";
+import { Activity, BarChart3, Smartphone, Bell, FileText, LayoutDashboard, Lock, LogOut, Menu, PlusCircle, Rocket, Upload, Users, X, type LucideIcon } from "lucide-react";
 import { logout } from "@/app/login/actions";
 
 export interface AdminUser {
@@ -29,6 +29,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard, active: (p) => p === "/" },
       { href: "/analytics", label: "Analytics", icon: BarChart3, active: (p) => p.startsWith("/analytics") },
+      { href: "/usage", label: "App usage", icon: Smartphone, active: (p) => p.startsWith("/usage") },
       { href: "/status", label: "System", icon: Activity, active: (p) => p.startsWith("/status") },
       { href: "/app-lock", label: "App lock", icon: Lock, active: (p) => p.startsWith("/app-lock") },
     ],
